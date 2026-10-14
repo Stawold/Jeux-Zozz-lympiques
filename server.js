@@ -5,6 +5,8 @@ const path = require('path');
 const { Server } = require('socket.io');
 
 const app = express();
+// Journal des visites (visible dans Render > Logs)
+app.use((req, res, next) => { if (req.path === '/' || req.path === '/health') console.log(new Date().toISOString(), req.method, req.path, req.headers['user-agent']?.slice(0, 60) || ''); next(); });
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (_, res) => res.send('ok'));
 const server = http.createServer(app);
@@ -192,6 +194,7 @@ function opponentOf(room, pid) {
 }
 
 io.on('connection', (socket) => {
+  console.log(new Date().toISOString(), 'joueur connecté', socket.id);
   const ctx = () => {
     const room = rooms.get(socket.data.room);
     const player = room?.players.get(socket.data.pid);
@@ -361,4 +364,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Bubblegame sur http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Jeux Zozz’lympiques en ligne sur le port ${PORT}`));
