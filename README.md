@@ -1,4 +1,4 @@
-# Les Jeux Ose’Lympiques (édition Taghazout)
+# Les Jeux Ose’Lympiques
 
 Les J.O. des slimes, de 2 à 16 joueurs, chacun sur son téléphone.
 

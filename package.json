@@ -1,7 +1,7 @@
 {
   "name": "oselympiques",
   "version": "1.0.0",
-  "description": "Les Jeux Ose’Lympiques (édition Taghazout) — J.O. multijoueur sur téléphone",
+  "description": "Les Jeux Ose’Lympiques — J.O. multijoueur sur téléphone",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

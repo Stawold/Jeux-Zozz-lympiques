@@ -495,3 +495,90 @@ export async function sautski(root, ctx) {
   T.stop();
   ctx.finish(best, (best / 10).toFixed(1).replace('.', ',') + ' m');
 }
+
+/* ---------------- Patinage artistique : sauts au bon moment et pirouettes ---------------- */
+export async function artistique(root, ctx) {
+  const PROG = [
+    { k: 'saut', n: 'Axel' }, { k: 'saut', n: 'Lutz' }, { k: 'pir', n: 'Pirouette assise' },
+    { k: 'saut', n: 'Salchow' }, { k: 'saut', n: 'Boucle piqué' }, { k: 'pir', n: 'Pirouette Biellmann' },
+    { k: 'saut', n: 'Triple Axel' }, { k: 'saut', n: 'Quadruple Lutz' },
+  ];
+  root.innerHTML = `
+    <div class="split-top"><canvas id="cv"></canvas></div>
+    <div class="split-bot">
+      <div class="hud"><span class="big" id="s">0 pts</span><span id="t">Élément 1/${PROG.length}</span></div>
+      <div class="phase ph-wait" id="ph">Prépare-toi</div>
+      <div class="help" id="msg">&nbsp;</div>
+      <div class="ringzone" id="rz"><canvas id="ring" style="position:absolute;inset:0;width:100%;height:100%"></canvas><span id="rl"></span></div>
+    </div>`;
+  const cv = $(root, '#cv'), rz = $(root, '#rz'), ring = $(root, '#ring'), rl = $(root, '#rl'), ph = $(root, '#ph'), msg = $(root, '#msg'), sEl = $(root, '#s'), tEl = $(root, '#t');
+  const { g, W, H } = fitCanvas(cv);
+  const RG = fitCanvas(ring);
+  let score = 0, spin = 0, jumpT = 0, sk = { x: W / 2, y: H * 0.6 }, trail = [];
+  const phase = (c, t, s) => { ph.className = 'phase ph-' + c; ph.textContent = t; msg.textContent = s || ' '; };
+  function draw(now) {
+    if (!root.isConnected) return;
+    g.fillStyle = '#eaf6ff'; g.fillRect(0, 0, W, H); stands(g, W, 14);
+    g.strokeStyle = 'rgba(124,192,230,.5)'; g.lineWidth = 2; g.beginPath(); g.ellipse(W / 2, H * 0.62, W * 0.42, H * 0.28, 0, 0, 7); g.stroke();
+    const t = now / 1000;
+    if (!spin) { sk.x = W / 2 + Math.cos(t * 0.8) * W * 0.3; sk.y = H * 0.62 + Math.sin(t * 0.8) * H * 0.2; }
+    trail.push({ x: sk.x, y: sk.y }); if (trail.length > 40) trail.shift();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2; g.beginPath(); trail.forEach((p, i) => (i ? g.lineTo(p.x, p.y + 12) : g.moveTo(p.x, p.y + 12))); g.stroke();
+    const hop = jumpT > now ? Math.sin((1 - (jumpT - now) / 600) * Math.PI) * 26 : 0;
+    g.save(); g.translate(sk.x, sk.y - hop); g.rotate(spin ? t * spin * 6 : 0); g.translate(-sk.x, -(sk.y - hop));
+    slime(g, sk.x, sk.y - hop, 15, ctx.color(ctx.me), '#c9b8ff');
+    g.restore();
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  const add = (p, txt) => { score += p; sEl.textContent = score + ' pts'; msg.textContent = txt; };
+  await countdown(root);
+  for (let i = 0; i < PROG.length; i++) {
+    const el = PROG[i]; tEl.textContent = `Élément ${i + 1}/${PROG.length}`;
+    const { g: rg, W: rw, H: rh } = RG; const c = { x: rw / 2, y: rh / 2 }, base = Math.min(rw, rh) * 0.22;
+    if (el.k === 'saut') {
+      // un cercle se resserre sur la cible : tape quand ils se superposent
+      phase('jump', `⛸ ${el.n}`, 'Tape quand le cercle mobile recouvre le cercle doré');
+      rl.textContent = 'TAP';
+      const dur = Math.max(900, 1500 - i * 70);
+      const res = await new Promise((resolve) => {
+        const t0 = performance.now(); let fin = false;
+        (function f() {
+          if (fin || !root.isConnected) return;
+          const k = (performance.now() - t0) / dur, r = base * (2.6 - 1.9 * k);
+          rg.clearRect(0, 0, rw, rh);
+          rg.strokeStyle = '#ffd75e'; rg.lineWidth = 10; rg.beginPath(); rg.arc(c.x, c.y, base, 0, 7); rg.stroke();
+          rg.strokeStyle = '#e8456b'; rg.lineWidth = 5; rg.beginPath(); rg.arc(c.x, c.y, Math.max(4, r), 0, 7); rg.stroke();
+          if (k > 1.25) { done(9); return; }
+          requestAnimationFrame(f);
+        })();
+        const h = (e) => { e.preventDefault(); const k = (performance.now() - t0) / dur; done(Math.abs(k - 0.842)); };
+        function done(d) { if (fin) return; fin = true; rz.removeEventListener('pointerdown', h); resolve(d); }
+        rz.addEventListener('pointerdown', h);
+      });
+      jumpT = performance.now() + 600;
+      if (res < 0.06) { add(10, `Parfait ! ${el.n} +10`); sfx('ok'); buzz(30); }
+      else if (res < 0.16) { add(6, `Bien ! ${el.n} +6`); sfx('tick'); }
+      else { add(0, `Chute sur le ${el.n}…`); sfx('fail'); buzz(150); }
+    } else {
+      // pirouette : faire tourner le doigt le plus de tours possible en 3 s
+      phase('run', `🌀 ${el.n}`, 'Fais des cercles sur le rond le plus vite possible (3 s)');
+      rl.textContent = '↻';
+      rg.clearRect(0, 0, rw, rh); rg.strokeStyle = '#c9b8ff'; rg.lineWidth = 14; rg.beginPath(); rg.arc(c.x, c.y, base * 1.5, 0, 7); rg.stroke();
+      let turns = 0, lastA = null;
+      const pa = (e) => { const r = rz.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); };
+      const down = (e) => { rz.setPointerCapture(e.pointerId); lastA = pa(e); };
+      const move = (e) => { if (lastA === null) return; const a = pa(e); let d = a - lastA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; lastA = a; turns += Math.abs(d) / (2 * Math.PI); spin = Math.min(3, turns / 3 + 0.5); };
+      const up = () => { lastA = null; };
+      rz.addEventListener('pointerdown', down); rz.addEventListener('pointermove', move); rz.addEventListener('pointerup', up);
+      await sleep(3000);
+      rz.removeEventListener('pointerdown', down); rz.removeEventListener('pointermove', move); rz.removeEventListener('pointerup', up);
+      spin = 0;
+      const p = Math.min(10, Math.round(turns * 1.2));
+      add(p, `${el.n} : ${turns.toFixed(1).replace('.', ',')} tours · +${p}`); sfx(p >= 7 ? 'ok' : 'tick');
+    }
+    await sleep(900);
+  }
+  phase('wait', `Programme terminé : ${score} pts`, 'Les juges ont rendu leur note');
+  ctx.finish(score, score + ' pts');
+}

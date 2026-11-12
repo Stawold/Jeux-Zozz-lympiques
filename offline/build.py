@@ -11,7 +11,7 @@ def strip(src):
 
 parts = [strip((pub / f).read_text()) for f in ['kit.js', 'games.js', 'races.js', 'solos.js', 'duels.js', 'extra.js']]
 main = (pub / 'main.js').read_text()
-main = re.sub(r"const GAMES = \{[^}]*\};", "const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo, hockey, patinage, bobsleigh, sautski, snowboard };", main)
+main = re.sub(r"const GAMES = \{[^}]*\};", "const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo, hockey, patinage, bobsleigh, sautski, snowboard, biathlon, artistique };", main)
 main = strip(main)
 css = (pub / 'style.css').read_text()
 loc = (pub / 'bots.js').read_text() + '\nwindow.OFFLINE = true; window.OFFLINE_ONLY = true; window.io = () => window.makeBotSocket();\n'

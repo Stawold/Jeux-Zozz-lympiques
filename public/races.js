@@ -9,6 +9,7 @@ const THEMES = {
   natation: { track: '#7fd3f5', line: 'rope', len: 200, marks: [50, 100, 150], unit: 'm', gear: 'swim' },
   aviron:   { track: '#5fb3e3', line: 'rgba(255,255,255,.5)', len: 2000, marks: [500, 1000, 1500], unit: 'm', gear: 'boat' },
   patinage: { track: '#e3f4ff', line: '#7cc0e6', len: 500, marks: [100, 200, 300, 400], unit: 'm' },
+  biathlon: { track: '#f4fbff', line: '#c9e6f7', len: 1500, marks: [500, 1000], unit: 'm', gear: 'ski' },
   bobsleigh: { track: '#eaf6ff', line: '#9fc9e8', len: 1200, marks: [300, 600, 900], unit: 'm', gear: 'bob' },
 };
 
@@ -340,4 +341,63 @@ export async function bobsleigh(root, ctx) {
     requestAnimationFrame(frame);
   });
   L.disabled = Rb.disabled = true;
+}
+
+/* ---------- Biathlon : 3 boucles de ski, 2 passages au tir (5 cibles chacun) ---------- */
+export async function biathlon(root, ctx) {
+  const R = raceScreen(root, ctx, 'biathlon');
+  R.ctl.innerHTML = `<div class="phase ph-run" id="ph">Ski : alterne G / D</div>
+    <div class="duo" id="skiz"><button class="tapzone" id="L" disabled>◀ G</button><button class="tapzone" id="Rb" disabled>D ▶</button></div>
+    <div class="range" id="range" hidden><div class="targets" id="tg"></div><div class="cross" id="cr"></div></div>
+    <button class="tapzone jumpbtn" id="fire" hidden>🎯 TIR</button>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), ph = $(root, '#ph'), skiz = $(root, '#skiz'), range = $(root, '#range'), tg = $(root, '#tg'), cr = $(root, '#cr'), fire = $(root, '#fire'), ok = limiter(14);
+  let last = -1, mode = 'ski', stand = 0;
+  await R.go(); L.disabled = Rb.disabled = false;
+  const stride = (side) => (e) => {
+    e.preventDefault(); if (mode !== 'ski' || !ok()) return;
+    if (side === last) { R.advance(2); } else R.advance(10);
+    last = side;
+    // arrivée au pas de tir à 500 m et 1000 m
+    if ((stand === 0 && R.meters >= 500) || (stand === 1 && R.meters >= 1000)) shoot();
+  };
+  L.addEventListener('pointerdown', stride(0)); Rb.addEventListener('pointerdown', stride(1));
+  async function shoot() {
+    mode = 'shoot'; stand++;
+    ph.className = 'phase ph-wait'; ph.textContent = `Pas de tir ${stand}/2 : 5 cibles`;
+    skiz.hidden = true; range.hidden = false; fire.hidden = false; sfx('whistle');
+    tg.innerHTML = Array.from({ length: 5 }, () => '<span></span>').join('');
+    const spots = [...tg.children];
+    let misses = 0;
+    for (let i = 0; i < 5; i++) {
+      spots.forEach((s, k) => s.classList.toggle('cur', k === i));
+      const r = await new Promise((res) => {
+        const t0 = performance.now(), ph0 = Math.random() * 6;
+        let fin = false;
+        (function sway() {
+          if (fin || !root.isConnected) return;
+          const t = (performance.now() - t0) / 1000;
+          // le viseur oscille autour de la cible ; il se calme au bout d'une seconde puis se remet à trembler
+          const amp = t < 1 ? 1 - t * 0.7 : 0.3 + (t - 1) * 0.35;
+          const off = Math.min(1.4, amp) * (Math.sin(t * 3.1 + ph0) * 0.7 + Math.sin(t * 7.3 + ph0) * 0.3);
+          const cx = (i + 0.5) / 5 * 100 + off * 9;
+          cr.style.left = cx + '%'; cr.dataset.off = off;
+          requestAnimationFrame(sway);
+        })();
+        const h = (e) => { e.preventDefault(); fin = true; fire.removeEventListener('pointerdown', h); res(Math.abs(Number(cr.dataset.off)) < 0.32); };
+        fire.addEventListener('pointerdown', h);
+      });
+      spots[i].classList.remove('cur'); spots[i].classList.add(r ? 'hit' : 'miss');
+      sfx(r ? 'pop' : 'fail'); buzz(r ? 20 : 120);
+      if (!r) misses++;
+      await sleep(250);
+    }
+    fire.hidden = true; range.hidden = true; skiz.hidden = false;
+    if (misses) {
+      ph.className = 'phase ph-run'; ph.textContent = `${misses} raté${misses > 1 ? 's' : ''} : tour de pénalité (${misses * 2} s)`;
+      R.trip(); await sleep(misses * 2000);
+    }
+    ph.className = 'phase ph-run'; ph.textContent = stand < 2 ? 'Ski : alterne G / D' : 'Dernière boucle : à fond !';
+    mode = 'ski';
+  }
+  R.onFinish = () => { L.disabled = Rb.disabled = true; };
 }

@@ -241,6 +241,35 @@ h1.logo.small .l2 { font-size: clamp(22px, 6.4vw, 36px); }
 #try[hidden] { display: none !important; }
 button { white-space: normal; overflow-wrap: anywhere; }
 .seasonlbl { font: 800 12px var(--display); text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
+
+/* Biathlon : pas de tir */
+.range { position: relative; height: 90px; background: #fff; border-radius: 22px; flex-shrink: 0; }
+.range .targets { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; }
+.range .targets span { width: 34px; height: 34px; border-radius: 50%; background: var(--plum); border: 6px solid #fff; box-shadow: 0 0 0 2px var(--plum); }
+.range .targets span.cur { background: var(--coral); }
+.range .targets span.hit { background: #fff; box-shadow: 0 0 0 2px var(--ok); }
+.range .targets span.miss { background: #bbb; box-shadow: 0 0 0 2px #bbb; }
+.range .cross { position: absolute; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid var(--coral); pointer-events: none; }
+.range .cross::before, .range .cross::after { content: ""; position: absolute; background: var(--coral); }
+.range .cross::before { left: 50%; top: -8px; bottom: -8px; width: 2px; margin-left: -1px; }
+.range .cross::after { top: 50%; left: -8px; right: -8px; height: 2px; margin-top: -1px; }
+#fire[hidden], .range[hidden], #skiz[hidden] { display: none !important; }
+/* Patinage artistique */
+.ringzone { position: relative; flex: 1; min-height: 160px; border-radius: 26px; background: #fff; touch-action: none; display: flex; align-items: center; justify-content: center; }
+.ringzone span { position: relative; font: 900 26px var(--display); color: var(--plum); pointer-events: none; }
+
+/* Compét' sur-mesure */
+.custom { margin-top: 10px; border-radius: 18px; background: #fff; padding: 4px; }
+.custom.on { box-shadow: 0 0 0 3px var(--plum); padding: 4px 10px 12px; }
+.customhead { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: var(--coral); color: var(--paper); border-radius: 14px; padding: 12px 14px; box-shadow: none; text-align: left; }
+.customhead b { font: 900 16px var(--display); } .customhead span { font: 600 12px var(--body); opacity: .9; }
+.custom.on .customhead { margin: 0 -6px 10px; width: calc(100% + 12px); }
+.stepper { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 4px 0 8px; }
+.stepper button { width: 48px; height: 48px; min-height: 48px; border-radius: 50%; padding: 0; font: 900 24px var(--display); }
+.stepper span { font: 700 15px var(--body); } .stepper b { font: 900 26px var(--display); }
+.chips button .ord { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--coral); color: #fff; font: 800 11px var(--display); margin-right: 5px; }
+.chips button:disabled { opacity: .35; }
+.order { margin: 10px 0 0; padding-left: 22px; font: 600 13px var(--body); columns: 2; }
 </style>
 <canvas id="bg"></canvas>
 <div id="app"></div>
@@ -291,11 +320,14 @@ window.makeBotSocket = function () {
   hockey: { name: 'Hockey sur glace', type: 'duel', season: 'hiver' },
   patinage: { name: 'Patinage de vitesse', type: 'solo', season: 'hiver' },
   bobsleigh: { name: 'Bobsleigh', type: 'solo', season: 'hiver' },
+  biathlon: { name: 'Biathlon', type: 'solo', season: 'hiver' },
+  artistique: { name: 'Patinage artistique', type: 'solo', season: 'hiver' },
   sautski: { name: 'Saut à ski', type: 'solo', season: 'hiver' },
   snowboard: { name: 'Snowboard halfpipe', type: 'solo', season: 'hiver' },
 };
   const MODES = {
   libre: { name: 'Jeu libre', count: 1 },
+  surmesure: { name: 'La compét’ sur-mesure', custom: true },
   penta: { name: 'Pentathlon', count: 5 },
   hepta: { name: 'Heptathlon', count: 7 },
   deca: { name: 'Décathlon', count: 10 },
@@ -326,7 +358,7 @@ function pickProgram(mode) {
 
   const t2 = (t) => ({ score: -Math.round(t * 100) / 100, detail: t.toFixed(2) + ' s' });
   function botResult(ev) {
-    const race = { sprint: [9.5, 15], haies: [12, 20], cyclisme: [8, 16], natation: [15, 26], aviron: [17.5, 28], tir: [7.5, 16], escalade: [6, 12], ski: [18.6, 30], patinage: [10.5, 18], bobsleigh: [16, 26] }[ev];
+    const race = { sprint: [9.5, 15], haies: [12, 20], cyclisme: [8, 16], natation: [15, 26], aviron: [17.5, 28], tir: [7.5, 16], escalade: [6, 12], ski: [18.6, 30], patinage: [10.5, 18], bobsleigh: [16, 26], biathlon: [32, 55] }[ev];
     if (race) { const t = rnd(...race); return { delay: t * 1000 + 2600, t, ...t2(t) }; }
     switch (ev) {
       case 'hauteur': { const k = Math.floor(rnd(0, 9)), f = Math.floor(rnd(3, 6)); const h = k ? 150 + (k - 1) * 10 : 0; return { delay: rnd(8, 25) * 1000, score: h * 100 - f, detail: h ? (h / 100).toFixed(2).replace('.', ',') + ' m' : '0 m' }; }
@@ -334,6 +366,7 @@ function pickProgram(mode) {
       case 'hiphop': { const s = Math.floor(rnd(60, 260)); return { delay: 62600, score: s, detail: s + ' pts' }; }
       case 'skate': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'basket': case 'rugby': { const n = Math.floor(rnd(1, 6)); return { delay: rnd(14, 24) * 1000, score: n, detail: n + '/5' }; }
+      case 'artistique': { const p = Math.round(rnd(30, 75)); return { delay: rnd(30, 40) * 1000, score: p, detail: p + ' pts' }; }
       case 'sautski': { const m = Math.round(rnd(130, 245) * 10) / 10; return { delay: rnd(25, 40) * 1000, score: Math.round(m * 10), detail: m.toFixed(1).replace('.', ',') + ' m' }; }
       case 'snowboard': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'haltero': { const kg = 100 + 10 * Math.floor(rnd(0, 11)); return { delay: rnd(25, 60) * 1000, score: kg * 100 - Math.floor(rnd(3, 6)), detail: kg + ' kg' }; }
@@ -438,7 +471,7 @@ function pickProgram(mode) {
     }
     if (e === 'start') {
       if (room.phase === 'final') for (const p of room.players.values()) { p.total = 0; p.medals = [0, 0, 0]; }
-      room.program = d.mode === 'libre' ? [d.event] : pickProgram(d.mode);
+      room.program = d.mode === 'libre' ? [d.event] : d.mode === 'surmesure' ? [...(d.events || [])] : pickProgram(d.mode);
       room.mode = d.mode; room.index = 0;
       return startEvent();
     }
@@ -1020,6 +1053,7 @@ const THEMES = {
   natation: { track: '#7fd3f5', line: 'rope', len: 200, marks: [50, 100, 150], unit: 'm', gear: 'swim' },
   aviron:   { track: '#5fb3e3', line: 'rgba(255,255,255,.5)', len: 2000, marks: [500, 1000, 1500], unit: 'm', gear: 'boat' },
   patinage: { track: '#e3f4ff', line: '#7cc0e6', len: 500, marks: [100, 200, 300, 400], unit: 'm' },
+  biathlon: { track: '#f4fbff', line: '#c9e6f7', len: 1500, marks: [500, 1000], unit: 'm', gear: 'ski' },
   bobsleigh: { track: '#eaf6ff', line: '#9fc9e8', len: 1200, marks: [300, 600, 900], unit: 'm', gear: 'bob' },
 };
 
@@ -1351,6 +1385,65 @@ async function bobsleigh(root, ctx) {
     requestAnimationFrame(frame);
   });
   L.disabled = Rb.disabled = true;
+}
+
+/* ---------- Biathlon : 3 boucles de ski, 2 passages au tir (5 cibles chacun) ---------- */
+async function biathlon(root, ctx) {
+  const R = raceScreen(root, ctx, 'biathlon');
+  R.ctl.innerHTML = `<div class="phase ph-run" id="ph">Ski : alterne G / D</div>
+    <div class="duo" id="skiz"><button class="tapzone" id="L" disabled>◀ G</button><button class="tapzone" id="Rb" disabled>D ▶</button></div>
+    <div class="range" id="range" hidden><div class="targets" id="tg"></div><div class="cross" id="cr"></div></div>
+    <button class="tapzone jumpbtn" id="fire" hidden>🎯 TIR</button>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), ph = $(root, '#ph'), skiz = $(root, '#skiz'), range = $(root, '#range'), tg = $(root, '#tg'), cr = $(root, '#cr'), fire = $(root, '#fire'), ok = limiter(14);
+  let last = -1, mode = 'ski', stand = 0;
+  await R.go(); L.disabled = Rb.disabled = false;
+  const stride = (side) => (e) => {
+    e.preventDefault(); if (mode !== 'ski' || !ok()) return;
+    if (side === last) { R.advance(2); } else R.advance(10);
+    last = side;
+    // arrivée au pas de tir à 500 m et 1000 m
+    if ((stand === 0 && R.meters >= 500) || (stand === 1 && R.meters >= 1000)) shoot();
+  };
+  L.addEventListener('pointerdown', stride(0)); Rb.addEventListener('pointerdown', stride(1));
+  async function shoot() {
+    mode = 'shoot'; stand++;
+    ph.className = 'phase ph-wait'; ph.textContent = `Pas de tir ${stand}/2 : 5 cibles`;
+    skiz.hidden = true; range.hidden = false; fire.hidden = false; sfx('whistle');
+    tg.innerHTML = Array.from({ length: 5 }, () => '<span></span>').join('');
+    const spots = [...tg.children];
+    let misses = 0;
+    for (let i = 0; i < 5; i++) {
+      spots.forEach((s, k) => s.classList.toggle('cur', k === i));
+      const r = await new Promise((res) => {
+        const t0 = performance.now(), ph0 = Math.random() * 6;
+        let fin = false;
+        (function sway() {
+          if (fin || !root.isConnected) return;
+          const t = (performance.now() - t0) / 1000;
+          // le viseur oscille autour de la cible ; il se calme au bout d'une seconde puis se remet à trembler
+          const amp = t < 1 ? 1 - t * 0.7 : 0.3 + (t - 1) * 0.35;
+          const off = Math.min(1.4, amp) * (Math.sin(t * 3.1 + ph0) * 0.7 + Math.sin(t * 7.3 + ph0) * 0.3);
+          const cx = (i + 0.5) / 5 * 100 + off * 9;
+          cr.style.left = cx + '%'; cr.dataset.off = off;
+          requestAnimationFrame(sway);
+        })();
+        const h = (e) => { e.preventDefault(); fin = true; fire.removeEventListener('pointerdown', h); res(Math.abs(Number(cr.dataset.off)) < 0.32); };
+        fire.addEventListener('pointerdown', h);
+      });
+      spots[i].classList.remove('cur'); spots[i].classList.add(r ? 'hit' : 'miss');
+      sfx(r ? 'pop' : 'fail'); buzz(r ? 20 : 120);
+      if (!r) misses++;
+      await sleep(250);
+    }
+    fire.hidden = true; range.hidden = true; skiz.hidden = false;
+    if (misses) {
+      ph.className = 'phase ph-run'; ph.textContent = `${misses} raté${misses > 1 ? 's' : ''} : tour de pénalité (${misses * 2} s)`;
+      R.trip(); await sleep(misses * 2000);
+    }
+    ph.className = 'phase ph-run'; ph.textContent = stand < 2 ? 'Ski : alterne G / D' : 'Dernière boucle : à fond !';
+    mode = 'ski';
+  }
+  R.onFinish = () => { L.disabled = Rb.disabled = true; };
 }
 
 // Jeux Ose’Lympiques — épreuves solo : saut en longueur, skateboard, basketball, rugby, mini-golf
@@ -2526,8 +2619,95 @@ async function sautski(root, ctx) {
   ctx.finish(best, (best / 10).toFixed(1).replace('.', ',') + ' m');
 }
 
+/* ---------------- Patinage artistique : sauts au bon moment et pirouettes ---------------- */
+async function artistique(root, ctx) {
+  const PROG = [
+    { k: 'saut', n: 'Axel' }, { k: 'saut', n: 'Lutz' }, { k: 'pir', n: 'Pirouette assise' },
+    { k: 'saut', n: 'Salchow' }, { k: 'saut', n: 'Boucle piqué' }, { k: 'pir', n: 'Pirouette Biellmann' },
+    { k: 'saut', n: 'Triple Axel' }, { k: 'saut', n: 'Quadruple Lutz' },
+  ];
+  root.innerHTML = `
+    <div class="split-top"><canvas id="cv"></canvas></div>
+    <div class="split-bot">
+      <div class="hud"><span class="big" id="s">0 pts</span><span id="t">Élément 1/${PROG.length}</span></div>
+      <div class="phase ph-wait" id="ph">Prépare-toi</div>
+      <div class="help" id="msg">&nbsp;</div>
+      <div class="ringzone" id="rz"><canvas id="ring" style="position:absolute;inset:0;width:100%;height:100%"></canvas><span id="rl"></span></div>
+    </div>`;
+  const cv = $(root, '#cv'), rz = $(root, '#rz'), ring = $(root, '#ring'), rl = $(root, '#rl'), ph = $(root, '#ph'), msg = $(root, '#msg'), sEl = $(root, '#s'), tEl = $(root, '#t');
+  const { g, W, H } = fitCanvas(cv);
+  const RG = fitCanvas(ring);
+  let score = 0, spin = 0, jumpT = 0, sk = { x: W / 2, y: H * 0.6 }, trail = [];
+  const phase = (c, t, s) => { ph.className = 'phase ph-' + c; ph.textContent = t; msg.textContent = s || ' '; };
+  function draw(now) {
+    if (!root.isConnected) return;
+    g.fillStyle = '#eaf6ff'; g.fillRect(0, 0, W, H); stands(g, W, 14);
+    g.strokeStyle = 'rgba(124,192,230,.5)'; g.lineWidth = 2; g.beginPath(); g.ellipse(W / 2, H * 0.62, W * 0.42, H * 0.28, 0, 0, 7); g.stroke();
+    const t = now / 1000;
+    if (!spin) { sk.x = W / 2 + Math.cos(t * 0.8) * W * 0.3; sk.y = H * 0.62 + Math.sin(t * 0.8) * H * 0.2; }
+    trail.push({ x: sk.x, y: sk.y }); if (trail.length > 40) trail.shift();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2; g.beginPath(); trail.forEach((p, i) => (i ? g.lineTo(p.x, p.y + 12) : g.moveTo(p.x, p.y + 12))); g.stroke();
+    const hop = jumpT > now ? Math.sin((1 - (jumpT - now) / 600) * Math.PI) * 26 : 0;
+    g.save(); g.translate(sk.x, sk.y - hop); g.rotate(spin ? t * spin * 6 : 0); g.translate(-sk.x, -(sk.y - hop));
+    slime(g, sk.x, sk.y - hop, 15, ctx.color(ctx.me), '#c9b8ff');
+    g.restore();
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  const add = (p, txt) => { score += p; sEl.textContent = score + ' pts'; msg.textContent = txt; };
+  await countdown(root);
+  for (let i = 0; i < PROG.length; i++) {
+    const el = PROG[i]; tEl.textContent = `Élément ${i + 1}/${PROG.length}`;
+    const { g: rg, W: rw, H: rh } = RG; const c = { x: rw / 2, y: rh / 2 }, base = Math.min(rw, rh) * 0.22;
+    if (el.k === 'saut') {
+      // un cercle se resserre sur la cible : tape quand ils se superposent
+      phase('jump', `⛸ ${el.n}`, 'Tape quand le cercle mobile recouvre le cercle doré');
+      rl.textContent = 'TAP';
+      const dur = Math.max(900, 1500 - i * 70);
+      const res = await new Promise((resolve) => {
+        const t0 = performance.now(); let fin = false;
+        (function f() {
+          if (fin || !root.isConnected) return;
+          const k = (performance.now() - t0) / dur, r = base * (2.6 - 1.9 * k);
+          rg.clearRect(0, 0, rw, rh);
+          rg.strokeStyle = '#ffd75e'; rg.lineWidth = 10; rg.beginPath(); rg.arc(c.x, c.y, base, 0, 7); rg.stroke();
+          rg.strokeStyle = '#e8456b'; rg.lineWidth = 5; rg.beginPath(); rg.arc(c.x, c.y, Math.max(4, r), 0, 7); rg.stroke();
+          if (k > 1.25) { done(9); return; }
+          requestAnimationFrame(f);
+        })();
+        const h = (e) => { e.preventDefault(); const k = (performance.now() - t0) / dur; done(Math.abs(k - 0.842)); };
+        function done(d) { if (fin) return; fin = true; rz.removeEventListener('pointerdown', h); resolve(d); }
+        rz.addEventListener('pointerdown', h);
+      });
+      jumpT = performance.now() + 600;
+      if (res < 0.06) { add(10, `Parfait ! ${el.n} +10`); sfx('ok'); buzz(30); }
+      else if (res < 0.16) { add(6, `Bien ! ${el.n} +6`); sfx('tick'); }
+      else { add(0, `Chute sur le ${el.n}…`); sfx('fail'); buzz(150); }
+    } else {
+      // pirouette : faire tourner le doigt le plus de tours possible en 3 s
+      phase('run', `🌀 ${el.n}`, 'Fais des cercles sur le rond le plus vite possible (3 s)');
+      rl.textContent = '↻';
+      rg.clearRect(0, 0, rw, rh); rg.strokeStyle = '#c9b8ff'; rg.lineWidth = 14; rg.beginPath(); rg.arc(c.x, c.y, base * 1.5, 0, 7); rg.stroke();
+      let turns = 0, lastA = null;
+      const pa = (e) => { const r = rz.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); };
+      const down = (e) => { rz.setPointerCapture(e.pointerId); lastA = pa(e); };
+      const move = (e) => { if (lastA === null) return; const a = pa(e); let d = a - lastA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; lastA = a; turns += Math.abs(d) / (2 * Math.PI); spin = Math.min(3, turns / 3 + 0.5); };
+      const up = () => { lastA = null; };
+      rz.addEventListener('pointerdown', down); rz.addEventListener('pointermove', move); rz.addEventListener('pointerup', up);
+      await sleep(3000);
+      rz.removeEventListener('pointerdown', down); rz.removeEventListener('pointermove', move); rz.removeEventListener('pointerup', up);
+      spin = 0;
+      const p = Math.min(10, Math.round(turns * 1.2));
+      add(p, `${el.n} : ${turns.toFixed(1).replace('.', ',')} tours · +${p}`); sfx(p >= 7 ? 'ok' : 'tick');
+    }
+    await sleep(900);
+  }
+  phase('wait', `Programme terminé : ${score} pts`, 'Les juges ont rendu leur note');
+  ctx.finish(score, score + ' pts');
+}
+
 import * as THREE from 'three';
-const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo, hockey, patinage, bobsleigh, sautski, snowboard };
+const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo, hockey, patinage, bobsleigh, sautski, snowboard, biathlon, artistique };
 
 /* ---------- Identité locale ---------- */
 const store = {
@@ -2563,7 +2743,7 @@ let S = null;            // état de la salle
 let runningGameId = null;
 let gameMsgHandler = null, gameInbox = [];
 let myResult = null;
-let libreEvent = 'sprint', chosenMode = 'totale';
+let libreEvent = 'sprint', chosenMode = 'totale', customN = 5, customList = [];
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const country = (code) => S?.countries.find((c) => c.code === code) || { flag: '🏳️', color: '#ccc', name: '?' };
@@ -2599,7 +2779,7 @@ function renderHome() {
   if (window.OFFLINE) {
     let nb = 7;
     app.innerHTML = `
-      <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+      <h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
       <p class="sub">Entraînement contre des bots</p>
       <div class="card">
         <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
@@ -2621,7 +2801,7 @@ function renderHome() {
     return;
   }
   app.innerHTML = `
-    <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+    <h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     <div class="card">
       <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
       <button id="create">Créer une partie</button>
@@ -2661,7 +2841,7 @@ function renderLobby() {
   const taken = new Set(S.players.map((p) => p.country));
   const link = `${location.origin}${location.pathname}?r=${S.code}`;
   app.innerHTML = `
-    <div class="kicker" style="margin-top:6px">Édition Taghazout</div>
+    
     <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     ${window.OFFLINE ? '' : `<div class="codecard"><div><div class="lbl">Code de la partie</div><div class="code">${S.code}</div></div>
       <button class="pillbtn" id="share">Partager</button></div>`}
@@ -2672,8 +2852,13 @@ function renderLobby() {
       ${S.countries.map((c) => `<button data-c="${c.code}" class="${me?.country === c.code ? 'sel' : ''}" ${!window.OFFLINE && taken.has(c.code) && me?.country !== c.code ? 'disabled' : ''} title="${c.name}" aria-label="${c.name}">${c.flag}</button>`).join('')}
     </div><div class="muted" style="margin-top:6px">${country(me?.country).name}</div></section>
     ${host ? `<section class="blk"><h2>Programme</h2>
-      <div class="tiles">${Object.entries(S.modes).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i % 5} ${chosenMode === k ? 'sel' : ''} ${mo.all ? 'wide' : ''}"><b>${String(modeCount(k)).padStart(2, '0')}</b><span>${mo.name}</span></button>`).join('')}</div>
+      <div class="tiles">${Object.entries(S.modes).filter(([, mo]) => !mo.custom).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i % 5} ${chosenMode === k ? 'sel' : ''} ${mo.all ? 'wide' : ''}"><b>${String(modeCount(k)).padStart(2, '0')}</b><span>${mo.name}</span></button>`).join('')}</div>
       ${chosenMode === 'libre' ? [['ete', '☀️ Été'], ['hiver', '❄️ Hiver']].map(([s, t]) => `<div class="seasonlbl">${t}</div><div class="chips">${Object.entries(S.events).filter(([, e]) => e.season === s).map(([k, e]) => `<button data-e="${k}" class="${libreEvent === k ? 'sel' : ''}">${e.name}</button>`).join('')}</div>`).join('') : ''}
+      ${S.modes.surmesure ? `<div class="custom ${chosenMode === 'surmesure' ? 'on' : ''}"><button class="customhead" data-m="surmesure"><b>✂️ La compét’ sur-mesure</b><span>Choisis le nombre d’épreuves et leur ordre</span></button>
+      ${chosenMode === 'surmesure' ? `<div class="stepper"><button id="cminus" aria-label="Moins">−</button><span><b>${customN}</b> épreuve${customN > 1 ? 's' : ''}</span><button id="cplus" aria-label="Plus">+</button></div>
+      <div class="muted">Touche les épreuves dans l’ordre voulu (${customList.length}/${customN}). Touche à nouveau pour retirer.</div>
+      ${[['ete', '☀️ Été'], ['hiver', '❄️ Hiver']].map(([s, t]) => `<div class="seasonlbl">${t}</div><div class="chips">${Object.entries(S.events).filter(([, e]) => e.season === s).map(([k, e]) => { const i = customList.indexOf(k); return `<button data-ce="${k}" class="${i >= 0 ? 'sel' : ''}" ${i < 0 && customList.length >= customN ? 'disabled' : ''}>${i >= 0 ? `<i class="ord">${i + 1}</i>` : ''}${e.name}</button>`; }).join('')}</div>`).join('')}
+      ${customList.length ? `<ol class="order">${customList.map((k) => `<li>${S.events[k].name}</li>`).join('')}</ol>` : ''}` : ''}</div>` : ''}
       <div class="muted" style="margin:10px 0">${modeHint()}</div>
       <button class="cta" id="start">Lancer les jeux <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></section>`
     : `<div class="card muted">En attente de l'hôte pour lancer…</div>`}
@@ -2681,8 +2866,12 @@ function renderLobby() {
   app.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => socket.emit('country', { code: b.dataset.c })));
   app.querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => { chosenMode = b.dataset.m; renderLobby(); }));
   app.querySelectorAll('[data-e]').forEach((b) => (b.onclick = () => { libreEvent = b.dataset.e; renderLobby(); }));
+  app.querySelectorAll('[data-ce]').forEach((b) => (b.onclick = () => { const k = b.dataset.ce, i = customList.indexOf(k); if (i >= 0) customList.splice(i, 1); else if (customList.length < customN) customList.push(k); renderLobby(); }));
+  const cm = document.getElementById('cminus'), cp = document.getElementById('cplus');
+  if (cm) cm.onclick = () => { customN = Math.max(1, customN - 1); customList = customList.slice(0, customN); renderLobby(); };
+  if (cp) cp.onclick = () => { customN = Math.min(Object.keys(S.events).length, customN + 1); renderLobby(); };
   const st = document.getElementById('start');
-  if (st) st.onclick = () => socket.emit('start', { mode: chosenMode, event: libreEvent });
+  if (st) { if (chosenMode === 'surmesure' && customList.length !== customN) st.disabled = true; st.onclick = () => socket.emit('start', { mode: chosenMode, event: libreEvent, events: customList }); }
   document.getElementById('leave').onclick = () => { socket.emit('leave'); store.del('bg_room'); S = null; history.replaceState(null, '', location.pathname); render(); scene3d.sync(); };
   const sh = document.getElementById('share'); if (sh) sh.onclick = async () => {
     try { if (navigator.share) await navigator.share({ title: 'Les Jeux Ose’Lympiques', text: `Rejoins les Jeux Ose’Lympiques ! Code ${S.code}`, url: link }); else { await navigator.clipboard.writeText(link); toast('Lien copié !'); } } catch {}
@@ -2691,12 +2880,14 @@ function renderLobby() {
 function modeCount(k) {
   const mo = S.modes[k], evs = Object.values(S.events);
   if (k === 'libre') return 1;
+  if (mo.custom) return customN;
   if (mo.count) return mo.count;
   return mo.all ? evs.length : evs.filter((e) => e.season === mo.season).length;
 }
 function modeHint() {
   const mo = S.modes[chosenMode], n = modeCount(chosenMode);
   if (chosenMode === 'libre') return '1 épreuve au choix';
+  if (mo.custom) return customList.length === customN ? `Programme sur-mesure : ${customN} épreuve${customN > 1 ? 's' : ''} dans ton ordre` : `Encore ${customN - customList.length} épreuve${customN - customList.length > 1 ? 's' : ''} à choisir`;
   if (mo.season === 'ete') return `Toutes les épreuves d'été (${n}) dans un ordre aléatoire`;
   if (mo.season === 'hiver') return `Toutes les épreuves d'hiver (${n}) dans un ordre aléatoire`;
   if (mo.all) return `La totale : les ${n} épreuves, été et hiver, dans un ordre aléatoire`;
@@ -2728,7 +2919,7 @@ const RECORDS = {
   snowboard: { who: 'Record Ose’Lympique', value: 700, fmt: (v) => Math.round(v) + ' pts' },
   sautski: { who: 'Stefan Kraft 🇦🇹', value: 253.5, fmt: (v) => v.toFixed(1).replace('.', ',') + ' m', world: true }, lower: true, fmt: fs },
 };
-const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
+const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh', 'biathlon'];
 function rawValue(ev, score) {
   if (TIMED.includes(ev) || ev === 'golf') return -score;
   if (ev === 'hauteur') return Math.ceil(score / 100) / 100; // cm -> m
@@ -2773,6 +2964,8 @@ const RULES = {
   escalade: { but: 'Grimper le mur de 15 m le plus vite possible.', ecran: 'En haut : les couloirs des grimpeurs, la prochaine prise de ton couloir en corail. En bas : ta position et les boutons ◀ et ▶.', gestes: ['Regarde de quel côté est la prise allumée.', 'Tape ◀ si elle est à gauche, ▶ si elle est à droite.', 'Mauvais côté = tu glisses d\'une prise et tu es bloqué un instant.'], score: 'Au temps.' },
   hockey: { but: 'Duel façon air-hockey sur glace : marquer dans la cage adverse.', ecran: 'La patinoire vue de dessus : toi en bas, l\'adversaire en haut, le palet noir.', gestes: ['Garde le doigt sur l\'écran : ton slime suit ton doigt.', 'Frappe le palet en fonçant dessus : il glisse beaucoup plus qu\'un ballon.', 'Tu ne peux pas dépasser la ligne du milieu.'], score: 'Premier à 3 buts (2 min, puis but en or). Victoire = 10 pts, défaite = 8 pts.' },
   patinage: { but: 'Patiner 500 m le plus vite possible.', ecran: 'En haut : l\'anneau de glace vu de côté. En bas : ta position et deux boutons G et D.', gestes: ['Tape G puis D puis G… en alternant : chaque bonne poussée = 5 m.', 'Deux fois le même pied = tu glisses et tu n\'avances presque pas.', 'Trouve un rythme régulier plutôt que de taper n\'importe comment.'], score: 'Au temps.' },
+  biathlon: { but: 'Boucler 1 500 m de ski et toucher un maximum de cibles.', ecran: 'En haut : la piste. En bas : deux boutons G / D, puis au pas de tir une rangée de 5 cibles avec un viseur qui bouge.', gestes: ['Ski : alterne G et D (le même pied deux fois = tu glisses moins loin).', 'À 500 m et 1 000 m : pas de tir. Le viseur oscille, appuie sur 🎯 TIR quand il est bien sur la cible orange.', 'Chaque cible ratée = 2 s de tour de pénalité.'], score: 'Au temps final, pénalités comprises.' },
+  artistique: { but: 'Réussir ton programme : 6 sauts et 2 pirouettes, notés par les juges.', ecran: 'En haut : ta patineuse sur la glace. En bas : une grande zone blanche où apparaissent les éléments.', gestes: ['Saut : un cercle rouge se resserre vers le cercle doré. Tape quand ils se superposent (Parfait 10, Bien 6, Chute 0). Ça accélère au fil du programme.', 'Pirouette : fais tourner ton doigt en rond sur la zone pendant 3 s. Plus de tours = plus de points (10 max).'], score: 'Aux points (80 max). Le plus haut gagne.' },
   bobsleigh: { but: 'Descendre la piste de 1 200 m le plus vite possible.', ecran: 'En haut : la piste. En bas : un bandeau qui annonce les virages et deux boutons ⬅ ➡.', gestes: ['① Poussée (3 s) : tape vite sur les boutons, ta vitesse de départ en dépend.', '② Descente : un virage s\'annonce et le bon bouton devient vert.', 'Tape-le vite (moins d\'une seconde) : bonne trajectoire = tu accélères. Raté ou trop tard = tu tapes la paroi et tu ralentis.'], score: 'Au temps.' },
   sautski: { but: 'Sauter le plus loin, en 2 sauts.', ecran: 'En haut : le tremplin et la piste de réception. En bas : un bandeau de phase, une jauge et le gros bouton.', gestes: ['① Appel : la flèche avance une seule fois. Tape SAUTE dans le vert, juste avant le rouge.', '② Vol (3 s) : incline le téléphone (ou glisse le doigt) pour garder les skis à plat.', '③ Réception : attends que le bouton devienne vert et tape TÉLÉMARK. Trop tôt ou trop tard coûte des mètres ; pas de télémark = chute.'], score: 'Au meilleur saut.' },
   snowboard: { but: 'Réussir 6 figures de plus en plus longues dans le halfpipe.', ecran: 'En haut : le halfpipe enneigé. En bas : la séquence de flèches et 4 boutons flèches.', gestes: ['Regarde : les flèches s\'allument une par une et restent visibles.', 'Elles se cachent : reproduis la séquence avec les boutons, en 10 s.', 'Une erreur = figure ratée, on passe à la suivante.'], score: 'Chaque figure réussie = 100 pts + bonus de rapidité.' },
@@ -2973,7 +3166,7 @@ function renderReveal() {
     if (duel) for (const x of r.ranking) { if (x.rank === 1) groups[0].push({ p: player(x.id), sub: '+10 pts' }); }
     else for (const x of r.ranking) if (x.rank && x.rank <= 3 && player(x.id)) groups[x.rank - 1].push({ p: player(x.id), sub: x.detail || '' });
     const meRow = r.ranking.find((x) => x.id === pid);
-    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
+    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh', 'biathlon'];
     const top = r.ranking.filter((x) => x.score != null).slice(0, 3);
     const pf = RACE.includes(r.event) && top.length >= 2 && Math.abs(top[0].score - top[1].score) <= 0.15;
     app.innerHTML = `

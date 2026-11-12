@@ -238,3 +238,32 @@ h1.logo.small .l2 { font-size: clamp(22px, 6.4vw, 36px); }
 #try[hidden] { display: none !important; }
 button { white-space: normal; overflow-wrap: anywhere; }
 .seasonlbl { font: 800 12px var(--display); text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
+
+/* Biathlon : pas de tir */
+.range { position: relative; height: 90px; background: #fff; border-radius: 22px; flex-shrink: 0; }
+.range .targets { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; }
+.range .targets span { width: 34px; height: 34px; border-radius: 50%; background: var(--plum); border: 6px solid #fff; box-shadow: 0 0 0 2px var(--plum); }
+.range .targets span.cur { background: var(--coral); }
+.range .targets span.hit { background: #fff; box-shadow: 0 0 0 2px var(--ok); }
+.range .targets span.miss { background: #bbb; box-shadow: 0 0 0 2px #bbb; }
+.range .cross { position: absolute; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid var(--coral); pointer-events: none; }
+.range .cross::before, .range .cross::after { content: ""; position: absolute; background: var(--coral); }
+.range .cross::before { left: 50%; top: -8px; bottom: -8px; width: 2px; margin-left: -1px; }
+.range .cross::after { top: 50%; left: -8px; right: -8px; height: 2px; margin-top: -1px; }
+#fire[hidden], .range[hidden], #skiz[hidden] { display: none !important; }
+/* Patinage artistique */
+.ringzone { position: relative; flex: 1; min-height: 160px; border-radius: 26px; background: #fff; touch-action: none; display: flex; align-items: center; justify-content: center; }
+.ringzone span { position: relative; font: 900 26px var(--display); color: var(--plum); pointer-events: none; }
+
+/* Compét' sur-mesure */
+.custom { margin-top: 10px; border-radius: 18px; background: #fff; padding: 4px; }
+.custom.on { box-shadow: 0 0 0 3px var(--plum); padding: 4px 10px 12px; }
+.customhead { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: var(--coral); color: var(--paper); border-radius: 14px; padding: 12px 14px; box-shadow: none; text-align: left; }
+.customhead b { font: 900 16px var(--display); } .customhead span { font: 600 12px var(--body); opacity: .9; }
+.custom.on .customhead { margin: 0 -6px 10px; width: calc(100% + 12px); }
+.stepper { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 4px 0 8px; }
+.stepper button { width: 48px; height: 48px; min-height: 48px; border-radius: 50%; padding: 0; font: 900 24px var(--display); }
+.stepper span { font: 700 15px var(--body); } .stepper b { font: 900 26px var(--display); }
+.chips button .ord { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--coral); color: #fff; font: 800 11px var(--display); margin-right: 5px; }
+.chips button:disabled { opacity: .35; }
+.order { margin: 10px 0 0; padding-left: 22px; font: 600 13px var(--body); columns: 2; }

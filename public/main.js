@@ -41,7 +41,7 @@ let S = null;            // état de la salle
 let runningGameId = null;
 let gameMsgHandler = null, gameInbox = [];
 let myResult = null;
-let libreEvent = 'sprint', chosenMode = 'totale';
+let libreEvent = 'sprint', chosenMode = 'totale', customN = 5, customList = [];
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const country = (code) => S?.countries.find((c) => c.code === code) || { flag: '🏳️', color: '#ccc', name: '?' };
@@ -77,7 +77,7 @@ function renderHome() {
   if (window.OFFLINE) {
     let nb = 7;
     app.innerHTML = `
-      <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+      <h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
       <p class="sub">Entraînement contre des bots</p>
       <div class="card">
         <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
@@ -99,7 +99,7 @@ function renderHome() {
     return;
   }
   app.innerHTML = `
-    <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+    <h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     <div class="card">
       <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
       <button id="create">Créer une partie</button>
@@ -139,7 +139,7 @@ function renderLobby() {
   const taken = new Set(S.players.map((p) => p.country));
   const link = `${location.origin}${location.pathname}?r=${S.code}`;
   app.innerHTML = `
-    <div class="kicker" style="margin-top:6px">Édition Taghazout</div>
+    
     <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     ${window.OFFLINE ? '' : `<div class="codecard"><div><div class="lbl">Code de la partie</div><div class="code">${S.code}</div></div>
       <button class="pillbtn" id="share">Partager</button></div>`}
@@ -150,8 +150,13 @@ function renderLobby() {
       ${S.countries.map((c) => `<button data-c="${c.code}" class="${me?.country === c.code ? 'sel' : ''}" ${!window.OFFLINE && taken.has(c.code) && me?.country !== c.code ? 'disabled' : ''} title="${c.name}" aria-label="${c.name}">${c.flag}</button>`).join('')}
     </div><div class="muted" style="margin-top:6px">${country(me?.country).name}</div></section>
     ${host ? `<section class="blk"><h2>Programme</h2>
-      <div class="tiles">${Object.entries(S.modes).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i % 5} ${chosenMode === k ? 'sel' : ''} ${mo.all ? 'wide' : ''}"><b>${String(modeCount(k)).padStart(2, '0')}</b><span>${mo.name}</span></button>`).join('')}</div>
+      <div class="tiles">${Object.entries(S.modes).filter(([, mo]) => !mo.custom).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i % 5} ${chosenMode === k ? 'sel' : ''} ${mo.all ? 'wide' : ''}"><b>${String(modeCount(k)).padStart(2, '0')}</b><span>${mo.name}</span></button>`).join('')}</div>
       ${chosenMode === 'libre' ? [['ete', '☀️ Été'], ['hiver', '❄️ Hiver']].map(([s, t]) => `<div class="seasonlbl">${t}</div><div class="chips">${Object.entries(S.events).filter(([, e]) => e.season === s).map(([k, e]) => `<button data-e="${k}" class="${libreEvent === k ? 'sel' : ''}">${e.name}</button>`).join('')}</div>`).join('') : ''}
+      ${S.modes.surmesure ? `<div class="custom ${chosenMode === 'surmesure' ? 'on' : ''}"><button class="customhead" data-m="surmesure"><b>✂️ La compét’ sur-mesure</b><span>Choisis le nombre d’épreuves et leur ordre</span></button>
+      ${chosenMode === 'surmesure' ? `<div class="stepper"><button id="cminus" aria-label="Moins">−</button><span><b>${customN}</b> épreuve${customN > 1 ? 's' : ''}</span><button id="cplus" aria-label="Plus">+</button></div>
+      <div class="muted">Touche les épreuves dans l’ordre voulu (${customList.length}/${customN}). Touche à nouveau pour retirer.</div>
+      ${[['ete', '☀️ Été'], ['hiver', '❄️ Hiver']].map(([s, t]) => `<div class="seasonlbl">${t}</div><div class="chips">${Object.entries(S.events).filter(([, e]) => e.season === s).map(([k, e]) => { const i = customList.indexOf(k); return `<button data-ce="${k}" class="${i >= 0 ? 'sel' : ''}" ${i < 0 && customList.length >= customN ? 'disabled' : ''}>${i >= 0 ? `<i class="ord">${i + 1}</i>` : ''}${e.name}</button>`; }).join('')}</div>`).join('')}
+      ${customList.length ? `<ol class="order">${customList.map((k) => `<li>${S.events[k].name}</li>`).join('')}</ol>` : ''}` : ''}</div>` : ''}
       <div class="muted" style="margin:10px 0">${modeHint()}</div>
       <button class="cta" id="start">Lancer les jeux <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></section>`
     : `<div class="card muted">En attente de l'hôte pour lancer…</div>`}
@@ -159,8 +164,12 @@ function renderLobby() {
   app.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => socket.emit('country', { code: b.dataset.c })));
   app.querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => { chosenMode = b.dataset.m; renderLobby(); }));
   app.querySelectorAll('[data-e]').forEach((b) => (b.onclick = () => { libreEvent = b.dataset.e; renderLobby(); }));
+  app.querySelectorAll('[data-ce]').forEach((b) => (b.onclick = () => { const k = b.dataset.ce, i = customList.indexOf(k); if (i >= 0) customList.splice(i, 1); else if (customList.length < customN) customList.push(k); renderLobby(); }));
+  const cm = document.getElementById('cminus'), cp = document.getElementById('cplus');
+  if (cm) cm.onclick = () => { customN = Math.max(1, customN - 1); customList = customList.slice(0, customN); renderLobby(); };
+  if (cp) cp.onclick = () => { customN = Math.min(Object.keys(S.events).length, customN + 1); renderLobby(); };
   const st = document.getElementById('start');
-  if (st) st.onclick = () => socket.emit('start', { mode: chosenMode, event: libreEvent });
+  if (st) { if (chosenMode === 'surmesure' && customList.length !== customN) st.disabled = true; st.onclick = () => socket.emit('start', { mode: chosenMode, event: libreEvent, events: customList }); }
   document.getElementById('leave').onclick = () => { socket.emit('leave'); store.del('bg_room'); S = null; history.replaceState(null, '', location.pathname); render(); scene3d.sync(); };
   const sh = document.getElementById('share'); if (sh) sh.onclick = async () => {
     try { if (navigator.share) await navigator.share({ title: 'Les Jeux Ose’Lympiques', text: `Rejoins les Jeux Ose’Lympiques ! Code ${S.code}`, url: link }); else { await navigator.clipboard.writeText(link); toast('Lien copié !'); } } catch {}
@@ -169,12 +178,14 @@ function renderLobby() {
 function modeCount(k) {
   const mo = S.modes[k], evs = Object.values(S.events);
   if (k === 'libre') return 1;
+  if (mo.custom) return customN;
   if (mo.count) return mo.count;
   return mo.all ? evs.length : evs.filter((e) => e.season === mo.season).length;
 }
 function modeHint() {
   const mo = S.modes[chosenMode], n = modeCount(chosenMode);
   if (chosenMode === 'libre') return '1 épreuve au choix';
+  if (mo.custom) return customList.length === customN ? `Programme sur-mesure : ${customN} épreuve${customN > 1 ? 's' : ''} dans ton ordre` : `Encore ${customN - customList.length} épreuve${customN - customList.length > 1 ? 's' : ''} à choisir`;
   if (mo.season === 'ete') return `Toutes les épreuves d'été (${n}) dans un ordre aléatoire`;
   if (mo.season === 'hiver') return `Toutes les épreuves d'hiver (${n}) dans un ordre aléatoire`;
   if (mo.all) return `La totale : les ${n} épreuves, été et hiver, dans un ordre aléatoire`;
@@ -206,7 +217,7 @@ const RECORDS = {
   snowboard: { who: 'Record Ose’Lympique', value: 700, fmt: (v) => Math.round(v) + ' pts' },
   sautski: { who: 'Stefan Kraft 🇦🇹', value: 253.5, fmt: (v) => v.toFixed(1).replace('.', ',') + ' m', world: true }, lower: true, fmt: fs },
 };
-const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
+const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh', 'biathlon'];
 function rawValue(ev, score) {
   if (TIMED.includes(ev) || ev === 'golf') return -score;
   if (ev === 'hauteur') return Math.ceil(score / 100) / 100; // cm -> m
@@ -251,6 +262,8 @@ const RULES = {
   escalade: { but: 'Grimper le mur de 15 m le plus vite possible.', ecran: 'En haut : les couloirs des grimpeurs, la prochaine prise de ton couloir en corail. En bas : ta position et les boutons ◀ et ▶.', gestes: ['Regarde de quel côté est la prise allumée.', 'Tape ◀ si elle est à gauche, ▶ si elle est à droite.', 'Mauvais côté = tu glisses d\'une prise et tu es bloqué un instant.'], score: 'Au temps.' },
   hockey: { but: 'Duel façon air-hockey sur glace : marquer dans la cage adverse.', ecran: 'La patinoire vue de dessus : toi en bas, l\'adversaire en haut, le palet noir.', gestes: ['Garde le doigt sur l\'écran : ton slime suit ton doigt.', 'Frappe le palet en fonçant dessus : il glisse beaucoup plus qu\'un ballon.', 'Tu ne peux pas dépasser la ligne du milieu.'], score: 'Premier à 3 buts (2 min, puis but en or). Victoire = 10 pts, défaite = 8 pts.' },
   patinage: { but: 'Patiner 500 m le plus vite possible.', ecran: 'En haut : l\'anneau de glace vu de côté. En bas : ta position et deux boutons G et D.', gestes: ['Tape G puis D puis G… en alternant : chaque bonne poussée = 5 m.', 'Deux fois le même pied = tu glisses et tu n\'avances presque pas.', 'Trouve un rythme régulier plutôt que de taper n\'importe comment.'], score: 'Au temps.' },
+  biathlon: { but: 'Boucler 1 500 m de ski et toucher un maximum de cibles.', ecran: 'En haut : la piste. En bas : deux boutons G / D, puis au pas de tir une rangée de 5 cibles avec un viseur qui bouge.', gestes: ['Ski : alterne G et D (le même pied deux fois = tu glisses moins loin).', 'À 500 m et 1 000 m : pas de tir. Le viseur oscille, appuie sur 🎯 TIR quand il est bien sur la cible orange.', 'Chaque cible ratée = 2 s de tour de pénalité.'], score: 'Au temps final, pénalités comprises.' },
+  artistique: { but: 'Réussir ton programme : 6 sauts et 2 pirouettes, notés par les juges.', ecran: 'En haut : ta patineuse sur la glace. En bas : une grande zone blanche où apparaissent les éléments.', gestes: ['Saut : un cercle rouge se resserre vers le cercle doré. Tape quand ils se superposent (Parfait 10, Bien 6, Chute 0). Ça accélère au fil du programme.', 'Pirouette : fais tourner ton doigt en rond sur la zone pendant 3 s. Plus de tours = plus de points (10 max).'], score: 'Aux points (80 max). Le plus haut gagne.' },
   bobsleigh: { but: 'Descendre la piste de 1 200 m le plus vite possible.', ecran: 'En haut : la piste. En bas : un bandeau qui annonce les virages et deux boutons ⬅ ➡.', gestes: ['① Poussée (3 s) : tape vite sur les boutons, ta vitesse de départ en dépend.', '② Descente : un virage s\'annonce et le bon bouton devient vert.', 'Tape-le vite (moins d\'une seconde) : bonne trajectoire = tu accélères. Raté ou trop tard = tu tapes la paroi et tu ralentis.'], score: 'Au temps.' },
   sautski: { but: 'Sauter le plus loin, en 2 sauts.', ecran: 'En haut : le tremplin et la piste de réception. En bas : un bandeau de phase, une jauge et le gros bouton.', gestes: ['① Appel : la flèche avance une seule fois. Tape SAUTE dans le vert, juste avant le rouge.', '② Vol (3 s) : incline le téléphone (ou glisse le doigt) pour garder les skis à plat.', '③ Réception : attends que le bouton devienne vert et tape TÉLÉMARK. Trop tôt ou trop tard coûte des mètres ; pas de télémark = chute.'], score: 'Au meilleur saut.' },
   snowboard: { but: 'Réussir 6 figures de plus en plus longues dans le halfpipe.', ecran: 'En haut : le halfpipe enneigé. En bas : la séquence de flèches et 4 boutons flèches.', gestes: ['Regarde : les flèches s\'allument une par une et restent visibles.', 'Elles se cachent : reproduis la séquence avec les boutons, en 10 s.', 'Une erreur = figure ratée, on passe à la suivante.'], score: 'Chaque figure réussie = 100 pts + bonus de rapidité.' },
@@ -451,7 +464,7 @@ function renderReveal() {
     if (duel) for (const x of r.ranking) { if (x.rank === 1) groups[0].push({ p: player(x.id), sub: '+10 pts' }); }
     else for (const x of r.ranking) if (x.rank && x.rank <= 3 && player(x.id)) groups[x.rank - 1].push({ p: player(x.id), sub: x.detail || '' });
     const meRow = r.ranking.find((x) => x.id === pid);
-    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
+    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh', 'biathlon'];
     const top = r.ranking.filter((x) => x.score != null).slice(0, 3);
     const pf = RACE.includes(r.event) && top.length >= 2 && Math.abs(top[0].score - top[1].score) <= 0.15;
     app.innerHTML = `

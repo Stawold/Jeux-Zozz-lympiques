@@ -61,11 +61,14 @@ const EVENTS = {
   hockey: { name: 'Hockey sur glace', type: 'duel', season: 'hiver' },
   patinage: { name: 'Patinage de vitesse', type: 'solo', season: 'hiver' },
   bobsleigh: { name: 'Bobsleigh', type: 'solo', season: 'hiver' },
+  biathlon: { name: 'Biathlon', type: 'solo', season: 'hiver' },
+  artistique: { name: 'Patinage artistique', type: 'solo', season: 'hiver' },
   sautski: { name: 'Saut à ski', type: 'solo', season: 'hiver' },
   snowboard: { name: 'Snowboard halfpipe', type: 'solo', season: 'hiver' },
 };
 const MODES = {
   libre: { name: 'Jeu libre', count: 1 },
+  surmesure: { name: 'La compét’ sur-mesure', custom: true },
   penta: { name: 'Pentathlon', count: 5 },
   hepta: { name: 'Heptathlon', count: 7 },
   deca: { name: 'Décathlon', count: 10 },
@@ -275,7 +278,7 @@ io.on('connection', (socket) => {
     emitState(room);
   });
 
-  socket.on('start', ({ mode, event }) => {
+  socket.on('start', ({ mode, event, events }) => {
     const { room, player } = ctx();
     if (!room || !player || room.hostId !== player.id) return;
     if (!['lobby', 'final'].includes(room.phase)) return;
@@ -284,6 +287,9 @@ io.on('connection', (socket) => {
     if (mode === 'libre') {
       if (!EVENTS[event]) return;
       room.program = [event];
+    } else if (mode === 'surmesure') {
+      if (!Array.isArray(events) || !events.length || events.length > 40 || !events.every((e) => EVENTS[e])) return;
+      room.program = [...events];
     } else room.program = pickProgram(mode);
     room.mode = mode;
     room.index = 0;
