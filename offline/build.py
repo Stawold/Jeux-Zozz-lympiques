@@ -11,11 +11,11 @@ def strip(src):
 
 parts = [strip((pub / f).read_text()) for f in ['kit.js', 'games.js', 'races.js', 'solos.js', 'duels.js', 'extra.js']]
 main = (pub / 'main.js').read_text()
-main = re.sub(r"const GAMES = \{[^}]*\};", "const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo };", main)
+main = re.sub(r"const GAMES = \{[^}]*\};", "const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo, hockey, patinage, bobsleigh, sautski, snowboard };", main)
 main = strip(main)
 css = (pub / 'style.css').read_text()
 loc = (pub / 'bots.js').read_text() + '\nwindow.OFFLINE = true; window.OFFLINE_ONLY = true; window.io = () => window.makeBotSocket();\n'
-html = f'''<title>Jeux Zozz’lympiques</title>
+html = f'''<title>Jeux Ose’Lympiques</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800;900&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
 <style>{css}</style>

@@ -1,4 +1,4 @@
-<title>Jeux Zozz’lympiques</title>
+<title>Jeux Ose’Lympiques</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800;900&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
 <style>/* Bubblegame — direction « Affiche olympique » : papier rose, aplats ronds pastel, typo large, prune profond */
@@ -234,11 +234,18 @@ h1.logo.small .l2 { font-size: clamp(22px, 6.4vw, 36px); }
 .trybar .pillbtn { min-height: 36px; padding: 6px 12px; font-size: 13px; background: var(--plum); color: var(--paper); }
 .tryend { position: absolute; left: 14px; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 8; display: flex; flex-direction: column; gap: 8px; }
 .tryend p { margin: 0; font-weight: 600; }
+
+/* Bouton d'essai sur deux lignes, sans débordement */
+#try { white-space: normal; line-height: 1.2; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-block: 10px; }
+#try small { font: 600 12px var(--body); opacity: .75; }
+#try[hidden] { display: none !important; }
+button { white-space: normal; overflow-wrap: anywhere; }
+.seasonlbl { font: 800 12px var(--display); text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
 </style>
 <canvas id="bg"></canvas>
 <div id="app"></div>
 <div id="toast"></div>
-<script>// Jeux Zozz’lympiques hors-ligne : un faux serveur + des bots, entièrement dans la page (aucune connexion nécessaire).
+<script>// Jeux Ose’Lympiques hors-ligne : un faux serveur + des bots, entièrement dans la page (aucune connexion nécessaire).
 window.makeBotSocket = function () {
   const handlers = {};
   const sock = { on(e, f) { (handlers[e] ??= []).push(f); }, emit(e, d) { setTimeout(() => srv(e, d || {}), 0); }, disconnect() { clearT(); room = null; } };
@@ -256,31 +263,52 @@ window.makeBotSocket = function () {
     { code: 'MA', name: 'Maroc', flag: '🇲🇦', color: '#0b6e4f' }, { code: 'NZ', name: 'Nouvelle-Zélande', flag: '🇳🇿', color: '#2ec4b6' },
   ];
   const EVENTS = {
-  sprint: { name: '100 m', type: 'solo' },
-  haies: { name: '110 m haies', type: 'solo' },
-  cyclisme: { name: 'Cyclisme sur piste', type: 'solo' },
-  natation: { name: 'Natation 4 nages', type: 'solo' },
-  aviron: { name: 'Aviron', type: 'solo' },
-  hauteur: { name: 'Saut en hauteur', type: 'solo' },
-  longueur: { name: 'Saut en longueur', type: 'solo' },
-  tir: { name: 'Tir de vitesse', type: 'solo' },
-  curling: { name: 'Curling', type: 'duel' },
-  football: { name: 'Football', type: 'duel' },
-  skate: { name: 'Skateboard', type: 'solo' },
-  basket: { name: 'Basketball', type: 'solo' },
-  handball: { name: 'Handball', type: 'duel' },
-  rugby: { name: 'Rugby', type: 'solo' },
-  escrime: { name: 'Escrime', type: 'duel' },
-  golf: { name: 'Mini-golf', type: 'solo' },
-  haltero: { name: 'Haltérophilie', type: 'solo' },
-  arc: { name: "Tir à l'arc", type: 'solo' },
-  ski: { name: 'Ski slalom', type: 'solo' },
-  marteau: { name: 'Lancer du marteau', type: 'solo' },
-  escalade: { name: 'Escalade', type: 'solo' },
-  judo: { name: 'Judo', type: 'duel' },
-  hiphop: { name: 'Hip-Hop', type: 'solo' },
+  // Été
+  sprint: { name: '100 m', type: 'solo', season: 'ete' },
+  haies: { name: '110 m haies', type: 'solo', season: 'ete' },
+  cyclisme: { name: 'Cyclisme sur piste', type: 'solo', season: 'ete' },
+  natation: { name: 'Natation 4 nages', type: 'solo', season: 'ete' },
+  aviron: { name: 'Aviron', type: 'solo', season: 'ete' },
+  hauteur: { name: 'Saut en hauteur', type: 'solo', season: 'ete' },
+  longueur: { name: 'Saut en longueur', type: 'solo', season: 'ete' },
+  tir: { name: 'Tir de vitesse', type: 'solo', season: 'ete' },
+  football: { name: 'Football', type: 'duel', season: 'ete' },
+  skate: { name: 'Skateboard', type: 'solo', season: 'ete' },
+  basket: { name: 'Basketball', type: 'solo', season: 'ete' },
+  handball: { name: 'Handball', type: 'duel', season: 'ete' },
+  rugby: { name: 'Rugby', type: 'solo', season: 'ete' },
+  escrime: { name: 'Escrime', type: 'duel', season: 'ete' },
+  golf: { name: 'Mini-golf', type: 'solo', season: 'ete' },
+  haltero: { name: 'Haltérophilie', type: 'solo', season: 'ete' },
+  arc: { name: "Tir à l'arc", type: 'solo', season: 'ete' },
+  marteau: { name: 'Lancer du marteau', type: 'solo', season: 'ete' },
+  escalade: { name: 'Escalade', type: 'solo', season: 'ete' },
+  judo: { name: 'Judo', type: 'duel', season: 'ete' },
+  hiphop: { name: 'Hip-Hop', type: 'solo', season: 'ete' },
+  // Hiver
+  ski: { name: 'Ski slalom', type: 'solo', season: 'hiver' },
+  curling: { name: 'Curling', type: 'duel', season: 'hiver' },
+  hockey: { name: 'Hockey sur glace', type: 'duel', season: 'hiver' },
+  patinage: { name: 'Patinage de vitesse', type: 'solo', season: 'hiver' },
+  bobsleigh: { name: 'Bobsleigh', type: 'solo', season: 'hiver' },
+  sautski: { name: 'Saut à ski', type: 'solo', season: 'hiver' },
+  snowboard: { name: 'Snowboard halfpipe', type: 'solo', season: 'hiver' },
 };
-  const MODES = { libre: { name: 'Jeu libre', count: 1 }, penta: { name: 'Pentathlon', count: 5 }, hepta: { name: 'Heptathlon', count: 7 }, deca: { name: 'Décathlon', count: 10 }, jo: { name: 'Mode J.O.', count: Infinity } };
+  const MODES = {
+  libre: { name: 'Jeu libre', count: 1 },
+  penta: { name: 'Pentathlon', count: 5 },
+  hepta: { name: 'Heptathlon', count: 7 },
+  deca: { name: 'Décathlon', count: 10 },
+  ete: { name: "J.O. d'été", season: 'ete' },
+  hiver: { name: "J.O. d'hiver", season: 'hiver' },
+  totale: { name: 'Jeux Ose’Lympiques · la totale', all: true },
+};
+function pickProgram(mode) {
+  const m = MODES[mode];
+  const keys = Object.keys(EVENTS).filter((k) => m.all || !m.season || EVENTS[k].season === m.season);
+  const list = shuffle(keys);
+  return m.count ? list.slice(0, m.count) : list;
+}
   const POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
   const BOT_NAMES = ['Gloop', 'Bloby', 'Squishy', 'Gommo', 'Bulle', 'Pâtou', 'Slimo', 'Jello', 'Mochi', 'Fizz', 'Wobble', 'Chewie', 'Pop', 'Glu', 'Flubb'];
   const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -298,7 +326,7 @@ window.makeBotSocket = function () {
 
   const t2 = (t) => ({ score: -Math.round(t * 100) / 100, detail: t.toFixed(2) + ' s' });
   function botResult(ev) {
-    const race = { sprint: [8.5, 15], haies: [11, 20], cyclisme: [8, 16], natation: [26, 45], aviron: [14, 26], tir: [9, 18], escalade: [6.5, 12], ski: [18, 30] }[ev];
+    const race = { sprint: [9.5, 15], haies: [12, 20], cyclisme: [8, 16], natation: [15, 26], aviron: [17.5, 28], tir: [7.5, 16], escalade: [6, 12], ski: [18.6, 30], patinage: [10.5, 18], bobsleigh: [16, 26] }[ev];
     if (race) { const t = rnd(...race); return { delay: t * 1000 + 2600, t, ...t2(t) }; }
     switch (ev) {
       case 'hauteur': { const k = Math.floor(rnd(0, 9)), f = Math.floor(rnd(3, 6)); const h = k ? 150 + (k - 1) * 10 : 0; return { delay: rnd(8, 25) * 1000, score: h * 100 - f, detail: h ? (h / 100).toFixed(2).replace('.', ',') + ' m' : '0 m' }; }
@@ -306,6 +334,8 @@ window.makeBotSocket = function () {
       case 'hiphop': { const s = Math.floor(rnd(60, 260)); return { delay: 62600, score: s, detail: s + ' pts' }; }
       case 'skate': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'basket': case 'rugby': { const n = Math.floor(rnd(1, 6)); return { delay: rnd(14, 24) * 1000, score: n, detail: n + '/5' }; }
+      case 'sautski': { const m = Math.round(rnd(130, 245) * 10) / 10; return { delay: rnd(25, 40) * 1000, score: Math.round(m * 10), detail: m.toFixed(1).replace('.', ',') + ' m' }; }
+      case 'snowboard': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'haltero': { const kg = 100 + 10 * Math.floor(rnd(0, 11)); return { delay: rnd(25, 60) * 1000, score: kg * 100 - Math.floor(rnd(3, 6)), detail: kg + ' kg' }; }
       case 'arc': { const s = Math.floor(rnd(40, 85)); return { delay: rnd(30, 50) * 1000, score: s, detail: s + ' pts' }; }
       case 'marteau': { const cm = Math.round(rnd(5200, 8500)); return { delay: rnd(15, 25) * 1000, score: cm, detail: (cm / 100).toFixed(2).replace('.', ',') + ' m' }; }
@@ -408,8 +438,7 @@ window.makeBotSocket = function () {
     }
     if (e === 'start') {
       if (room.phase === 'final') for (const p of room.players.values()) { p.total = 0; p.medals = [0, 0, 0]; }
-      const all = Object.keys(EVENTS);
-      room.program = d.mode === 'libre' ? [d.event] : shuffle(all).slice(0, Math.min(MODES[d.mode].count, all.length));
+      room.program = d.mode === 'libre' ? [d.event] : pickProgram(d.mode);
       room.mode = d.mode; room.index = 0;
       return startEvent();
     }
@@ -427,7 +456,7 @@ window.OFFLINE = true; window.OFFLINE_ONLY = true; window.io = () => window.make
 </script>
 <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
 <script type="module">
-// Jeux Zozz’lympiques — outils partagés par les épreuves
+// Jeux Ose’Lympiques — outils partagés par les épreuves
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const $ = (root, sel) => root.querySelector(sel);
 
@@ -574,7 +603,7 @@ function tilt(dragEl, range = 30) {
   };
 }
 
-// Jeux Zozz’lympiques — épreuves V1 (tir, hauteur, hip-hop, curling)
+// Jeux Ose’Lympiques — épreuves V1 (tir, hauteur, hip-hop, curling)
 
 /* ---------------- Tir de vitesse (écran partagé) ---------------- */
 async function tir(root, ctx) {
@@ -981,7 +1010,7 @@ async function curling(root, ctx) {
 }
 
 
-// Jeux Zozz’lympiques — moteur de course partagé (vue de côté en haut, position en direct en bas)
+// Jeux Ose’Lympiques — moteur de course partagé (vue de côté en haut, position en direct en bas)
 // + les 5 courses : 100 m, 110 m haies, cyclisme sur piste, natation 4 nages, aviron.
 
 const THEMES = {
@@ -990,6 +1019,8 @@ const THEMES = {
   cyclisme: { track: '#e9b98a', line: '#4a7bd6', len: 1000, marks: [250, 500, 750], unit: 'm', gear: 'bike' },
   natation: { track: '#7fd3f5', line: 'rope', len: 200, marks: [50, 100, 150], unit: 'm', gear: 'swim' },
   aviron:   { track: '#5fb3e3', line: 'rgba(255,255,255,.5)', len: 2000, marks: [500, 1000, 1500], unit: 'm', gear: 'boat' },
+  patinage: { track: '#e3f4ff', line: '#7cc0e6', len: 500, marks: [100, 200, 300, 400], unit: 'm' },
+  bobsleigh: { track: '#eaf6ff', line: '#9fc9e8', len: 1200, marks: [300, 600, 900], unit: 'm', gear: 'bob' },
 };
 
 function drawSlime(g, cx, cy, r, color, gear, hop, t) {
@@ -1000,6 +1031,11 @@ function drawSlime(g, cx, cy, r, color, gear, hop, t) {
       g.beginPath(); const a = t * 12; g.moveTo(cx + s * r * 0.9 + Math.cos(a) * r * 0.5, cy + r * 0.55 + Math.sin(a) * r * 0.5); g.lineTo(cx + s * r * 0.9 - Math.cos(a) * r * 0.5, cy + r * 0.55 - Math.sin(a) * r * 0.5); g.stroke();
     }
     hop = 0; cy -= r * 0.25;
+  }
+  if (gear === 'bob') { // bob
+    g.fillStyle = '#e8456b'; g.beginPath(); g.moveTo(cx - r * 1.6, cy + r * 0.2); g.lineTo(cx + r * 1.2, cy + r * 0.2); g.quadraticCurveTo(cx + r * 2, cy + r * 0.5, cx + r * 1.2, cy + r * 0.9); g.lineTo(cx - r * 1.6, cy + r * 0.9); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = '#2a1638'; g.beginPath(); g.moveTo(cx - r * 1.5, cy + r * 1.05); g.lineTo(cx + r * 1.3, cy + r * 1.05); g.stroke();
+    hop = 0;
   }
   if (gear === 'boat') { // coque + avirons
     g.fillStyle = '#fff1f5'; g.beginPath(); g.moveTo(cx - r * 1.8, cy + r * 0.5); g.lineTo(cx + r * 2, cy + r * 0.5); g.lineTo(cx + r * 1.4, cy + r * 0.9); g.lineTo(cx - r * 1.4, cy + r * 0.9); g.closePath(); g.fill(); g.stroke();
@@ -1258,7 +1294,66 @@ async function aviron(root, ctx) {
   rz.addEventListener('pointerup', () => { y0 = null; });
 }
 
-// Jeux Zozz’lympiques — épreuves solo : saut en longueur, skateboard, basketball, rugby, mini-golf
+/* ---------- Patinage de vitesse 500 m : alterner pied gauche / pied droit ---------- */
+async function patinage(root, ctx) {
+  const R = raceScreen(root, ctx, 'patinage');
+  R.ctl.innerHTML = `<div class="duo"><button class="tapzone" id="L" disabled>◀ G</button><button class="tapzone" id="Rb" disabled>D ▶</button></div>
+    <div class="help" id="hint">Alterne gauche, droite, gauche… Deux fois le même pied = tu glisses.</div>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), hint = $(root, '#hint'), ok = limiter(14);
+  let last = -1;
+  await R.go(); L.disabled = Rb.disabled = false;
+  const stride = (side) => (e) => {
+    e.preventDefault(); if (!ok()) return;
+    if (side === last) { R.advance(1); R.trip(); sfx('fail'); hint.textContent = '💥 Même pied deux fois : tu glisses !'; }
+    else { R.advance(5); hint.textContent = side ? 'Pied droit… gauche maintenant !' : 'Pied gauche… droit maintenant !'; }
+    last = side;
+  };
+  L.addEventListener('pointerdown', stride(0)); Rb.addEventListener('pointerdown', stride(1));
+  R.onFinish = () => { L.disabled = Rb.disabled = true; };
+}
+
+/* ---------- Bobsleigh : poussée au départ puis virages au bon côté ---------- */
+async function bobsleigh(root, ctx) {
+  const R = raceScreen(root, ctx, 'bobsleigh');
+  R.ctl.innerHTML = `<div class="phase ph-run" id="ph">① Poussée : tape vite !</div>
+    <div class="duo"><button class="tapzone" id="L" disabled>⬅</button><button class="tapzone" id="Rb" disabled>➡</button></div>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), ph = $(root, '#ph'), ok = limiter(15);
+  await R.go(); L.disabled = Rb.disabled = false;
+  // Phase 1 : poussée (3 s), les deux boutons comptent
+  let taps = 0, phase = 'push', want = -1, deadline = 0, speed = 0, nextCurve = Infinity;
+  const onTap = (side) => (e) => {
+    e.preventDefault();
+    if (phase === 'push') { if (ok()) { taps++; R.advance(0.6); } return; }
+    if (want < 0) return;
+    if (side === want) { speed = Math.min(130, speed + 6); sfx('tick'); ph.className = 'phase ph-jump'; ph.textContent = '✅ Bonne trajectoire !'; }
+    else { speed = Math.max(40, speed - 20); R.trip(); sfx('fail'); ph.className = 'phase ph-run'; ph.textContent = '💥 Tu tapes la paroi !'; }
+    want = -1; nextCurve = performance.now() + 700 + Math.random() * 900; L.className = Rb.className = 'tapzone';
+  };
+  L.addEventListener('pointerdown', onTap(0)); Rb.addEventListener('pointerdown', onTap(1));
+  await sleep(3000);
+  phase = 'run'; speed = 40 + Math.min(30, taps) * 2;
+  ph.className = 'phase ph-wait'; ph.textContent = `Vitesse de départ : ${Math.round(speed)} km/h · suis les virages !`;
+  let lastT = performance.now(); nextCurve = performance.now() + 1200;
+  await new Promise((res) => {
+    function frame(t) {
+      if (!root.isConnected || R.finished) return res();
+      const dt = Math.max(0, Math.min(0.05, (t - lastT) / 1000)); lastT = t;
+      R.advance(speed / 3.6 * dt * 3); // échelle de jeu : ~12 à 20 s de descente
+      if (want < 0 && t > nextCurve) {
+        want = Math.random() < 0.5 ? 0 : 1; deadline = t + 900;
+        (want ? Rb : L).className = 'tapzone jumpbtn'; (want ? L : Rb).className = 'tapzone';
+        ph.className = 'phase ph-wait'; ph.textContent = want ? 'Virage à DROITE ➡' : '⬅ Virage à GAUCHE';
+        buzz(30);
+      }
+      if (want >= 0 && t > deadline) { speed = Math.max(40, speed - 20); R.trip(); sfx('fail'); ph.className = 'phase ph-run'; ph.textContent = '💥 Trop tard, tu tapes la paroi !'; want = -1; nextCurve = t + 700 + Math.random() * 900; L.className = Rb.className = 'tapzone'; }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+  L.disabled = Rb.disabled = true;
+}
+
+// Jeux Ose’Lympiques — épreuves solo : saut en longueur, skateboard, basketball, rugby, mini-golf
 
 const fmtM = (cm) => (cm / 100).toFixed(2).replace('.', ',') + ' m';
 
@@ -1344,8 +1439,9 @@ async function longueur(root, ctx) {
 }
 
 /* ---------------- Skateboard : séquences à reproduire ---------------- */
-async function skate(root, ctx) {
-  const TRICKS = ['Ollie', 'Kickflip', 'Heelflip', '360 Flip', 'Impossible', 'Darkslide'];
+const snowboard = (root, ctx) => skate(root, ctx, true);
+async function skate(root, ctx, snow = false) {
+  const TRICKS = snow ? ['Indy', 'Method', 'McTwist', 'Frontside 720', 'Double Cork', 'Triple Cork 1440'] : ['Ollie', 'Kickflip', 'Heelflip', '360 Flip', 'Impossible', 'Darkslide'];
   const AR = ['⬅️', '⬇️', '⬆️', '➡️'];
   root.innerHTML = `
     <div class="split-top"><canvas id="cv"></canvas></div>
@@ -1364,12 +1460,13 @@ async function skate(root, ctx) {
     g.fillStyle = '#fff1f5'; g.fillRect(0, 0, W, H); stands(g, W, 14);
     // half-pipe
     const gy = H * 0.8;
-    g.fillStyle = '#c9d3e3'; g.beginPath(); g.moveTo(0, H * 0.3); g.quadraticCurveTo(0, gy, W * 0.25, gy); g.lineTo(W * 0.75, gy); g.quadraticCurveTo(W, gy, W, H * 0.3); g.lineTo(W, H); g.lineTo(0, H); g.fill();
+    g.fillStyle = snow ? '#f4fbff' : '#c9d3e3'; g.beginPath(); g.moveTo(0, H * 0.3); g.quadraticCurveTo(0, gy, W * 0.25, gy); g.lineTo(W * 0.75, gy); g.quadraticCurveTo(W, gy, W, H * 0.3); g.lineTo(W, H); g.lineTo(0, H); g.fill();
     g.strokeStyle = '#2a1638'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, H * 0.3); g.quadraticCurveTo(0, gy, W * 0.25, gy); g.lineTo(W * 0.75, gy); g.quadraticCurveTo(W, gy, W, H * 0.3); g.stroke();
     let x = W / 2 + Math.sin(t / 900) * W * 0.18, y = gy - 22, rot = 0;
     if (trick) { const k = Math.min(1, (t - trick.t0) / 1100); y -= Math.sin(k * Math.PI) * H * 0.4; rot = trick.ok ? k * Math.PI * 2 : Math.sin(k * 20) * 0.3; if (k >= 1) trick = null; }
     g.save(); g.translate(x, y); g.rotate(rot);
-    g.fillStyle = '#e8456b'; g.fillRect(-20, 14, 40, 5); g.fillStyle = '#2a1638'; g.beginPath(); g.arc(-13, 22, 3, 0, 7); g.arc(13, 22, 3, 0, 7); g.fill();
+    if (snow) { g.fillStyle = '#e8456b'; g.beginPath(); g.ellipse(0, 17, 26, 5, 0, 0, 7); g.fill(); }
+    else { g.fillStyle = '#e8456b'; g.fillRect(-20, 14, 40, 5); g.fillStyle = '#2a1638'; g.beginPath(); g.arc(-13, 22, 3, 0, 7); g.arc(13, 22, 3, 0, 7); g.fill(); }
     g.restore();
     slime(g, x, y, 14, ctx.color(ctx.me));
     requestAnimationFrame(draw);
@@ -1519,7 +1616,7 @@ async function golf(root, ctx) {
     { name: 'Le Couloir', s: [12, 150], h: [88, 150], walls: [[24, 30, 7, 130], [48, 0, 7, 130], [72, 30, 7, 130]] },
     { name: 'La Forteresse', s: [50, 150], h: [50, 45], walls: [[25, 25, 50, 6], [25, 25, 6, 45], [69, 25, 6, 45], [25, 64, 18, 6], [57, 64, 18, 6]] },
     { name: 'Le Zigzag', s: [85, 152], h: [15, 15], walls: [[30, 125, 70, 6], [0, 95, 70, 6], [30, 65, 70, 6], [0, 35, 70, 6]] },
-    { name: "L'Entonnoir", s: [50, 152], h: [50, 20], walls: [[0, 90, 44, 6], [56, 90, 44, 6], [44, 70, 4, 26], [52, 70, 4, 26], [30, 40, 40, 5]] },
+    { name: "L'Entonnoir", s: [50, 152], h: [50, 20], walls: [[0, 90, 38, 6], [62, 90, 38, 6], [36, 66, 5, 30], [59, 66, 5, 30], [30, 40, 40, 5]] },
   ];
   let seed = (ctx.current.seed || 1) >>> 0;
   const rand = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -1529,7 +1626,7 @@ async function golf(root, ctx) {
   root.innerHTML = `
     <div class="hud"><span class="big" id="s">0 coup</span><span id="t">Trou 1/3</span></div>
     <canvas class="full" id="cv" style="background:#9fe3cf"></canvas>
-    <div class="help" id="msg">Glisse vers l'arrière pour viser et doser, puis relâche. 7 coups max par trou.</div>`;
+    <div class="help" id="msg">Glisse vers l'arrière pour viser et doser, puis relâche. 10 coups max par trou.</div>`;
   const cv = $(root, '#cv'), msg = $(root, '#msg'), sEl = $(root, '#s'), tEl = $(root, '#t');
   const { g, W, H } = fitCanvas(cv);
   const sc = Math.min(W / 104, H / 164), ox = (W - 100 * sc) / 2, oy = (H - 160 * sc) / 2;
@@ -1597,7 +1694,7 @@ async function golf(root, ctx) {
     tEl.textContent = `Trou ${hole + 1}/3 · ${HOLES[hole].name}`;
     draw();
     if (hole === 0) await countdown(root);
-    while (!ball.in && strokes < 7) {
+    while (!ball.in && strokes < 10) {
       msg.textContent = `Coup ${strokes + 1} — glisse vers l'arrière puis relâche`;
       const v = await new Promise((res) => {
         const down = (e) => { const [x, y] = pt(e); aim = { sx: x, sy: y, cx: x, cy: y }; cv.setPointerCapture(e.pointerId); draw(); };
@@ -1610,14 +1707,14 @@ async function golf(root, ctx) {
       ball.vx = v.vx; ball.vy = v.vy;
       await roll();
     }
-    if (!ball.in) { total++; sEl.textContent = total + ' coups'; msg.textContent = '⛳ 7 coups atteints : +1 de pénalité'; }
+    if (!ball.in) { total++; sEl.textContent = total + ' coups'; msg.textContent = '⛳ 10 coups atteints : +1 de pénalité'; }
     else { sfx('ok'); } if (ball.in) msg.textContent = strokes === 1 ? '🎉 TROU EN UN !' : `⛳ Dans le trou en ${strokes} coups`;
     await sleep(1400);
   }
   ctx.finish(-total, total + ' coups');
 }
 
-// Jeux Zozz’lympiques — duels : football (air-hockey), handball (7 m), escrime
+// Jeux Ose’Lympiques — duels : football (air-hockey), handball (7 m), escrime
 
 // Outils communs aux duels : adversaire, messages, forfait
 function duel(ctx) {
@@ -1803,13 +1900,15 @@ async function escrime(root, ctx) {
 const FOOT = { win: 3, limit: 120, goal: [32, 68], pr: 8, br: 4, zone: 0.5, field: '#7fd6a3', friction: 0.6, minSpeed: 0, serve: 0, maxSpeed: 260, botSpeed: 115, unit: 'buts', help: 'Garde le doigt sur ton slime pour le déplacer. Interdit de passer la ligne du milieu.' };
 const PING = { win: 5, limit: 150, goal: [0, 100], pr: 7, br: 3, zone: 0.66, field: '#4a8fe0', friction: 1, minSpeed: 85, serve: 95, maxSpeed: 300, botSpeed: 150, unit: 'points', help: 'Glisse ta raquette pour renvoyer la balle. Une balle qui passe derrière toi = point pour l\'adversaire.' };
 const football = (root, ctx) => airGame(root, ctx, FOOT);
+const HOCKEY = { ...FOOT, goal: [36, 64], field: '#e3f4ff', friction: 0.85, maxSpeed: 300, botSpeed: 125, help: 'Garde le doigt sur ton slime pour le déplacer. Le palet glisse beaucoup sur la glace ! Interdit de passer la ligne rouge.' };
+const hockey = (root, ctx) => airGame(root, ctx, HOCKEY);
 async function airGame(root, ctx, C) {
   const D = duel(ctx);
   const WIN = C.win, LIMIT = C.limit;
   root.innerHTML = `
     <div class="hud"><span class="big" id="sc">0 – 0</span><span>vs ${D.oppName}</span><span id="tm">2:00</span></div>
     <canvas class="full" id="cv"></canvas>
-    <div class="help" id="msg">Garde le doigt sur ton slime pour le déplacer. ${C.help} Premier à ${WIN} ${C.unit}.</div>`;
+    <div class="help" id="msg">${C.help} Premier à ${WIN} ${C.unit}.</div>`;
   const cv = $(root, '#cv'), msg = $(root, '#msg'), scEl = $(root, '#sc'), tm = $(root, '#tm');
   const { g, W, H } = fitCanvas(cv);
   const FW = 100, FH = 160, PR = C.pr, BR = C.br, GOAL = C.goal, ZY = FH * C.zone;
@@ -1828,7 +1927,7 @@ async function airGame(root, ctx, C) {
     g.clearRect(0, 0, W, H);
     g.fillStyle = C.field; g.fillRect(ox, oy, FW * sc, FH * sc);
     for (let k = 0; k < 8; k++) { g.fillStyle = k % 2 ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.04)'; g.fillRect(ox, oy + k * FH * sc / 8, FW * sc, FH * sc / 8); }
-    g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(ox, oy, FW * sc, FH * sc);
+    g.strokeStyle = C.field === '#e3f4ff' ? '#e8456b' : '#fff'; g.lineWidth = 3; g.strokeRect(ox, oy, FW * sc, FH * sc);
     g.beginPath(); g.moveTo(ox, oy + FH * sc / 2); g.lineTo(ox + FW * sc, oy + FH * sc / 2); g.stroke();
     g.beginPath(); g.arc(ox + FW * sc / 2, oy + FH * sc / 2, 14 * sc, 0, 7); g.stroke();
     const gw = (GOAL[1] - GOAL[0]) * sc, gx0 = ox + GOAL[0] * sc;
@@ -1838,8 +1937,8 @@ async function airGame(root, ctx, C) {
     slime(g, hx, hy, PR * sc, D.host ? D.myCol : D.oppCol);
     slime(g, gx, gy, PR * sc, D.host ? D.oppCol : D.myCol);
     const [bx, by] = toScreen(st.ball);
-    g.fillStyle = '#fff'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill(); g.stroke();
-    g.fillStyle = '#2a1638'; g.beginPath(); g.arc(bx, by, BR * sc * 0.4, 0, 7); g.fill();
+    g.fillStyle = C.field === '#e3f4ff' ? '#2a1638' : '#fff'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = C.field === '#e3f4ff' ? '#4a2b5e' : '#2a1638'; g.beginPath(); g.arc(bx, by, BR * sc * 0.4, 0, 7); g.fill();
     const mine = D.host ? st.s[0] : st.s[1], theirs = D.host ? st.s[1] : st.s[0];
     scEl.textContent = `${mine} – ${theirs}`;
     const left = Math.max(0, LIMIT - st.t);
@@ -1930,7 +2029,7 @@ async function airGame(root, ctx, C) {
   requestAnimationFrame(step);
 }
 
-// Jeux Zozz’lympiques — épreuves 2e vague : haltérophilie, tir à l'arc, ski slalom, lancer du marteau, escalade, judo
+// Jeux Ose’Lympiques — épreuves 2e vague : haltérophilie, tir à l'arc, ski slalom, lancer du marteau, escalade, judo
 
 const PLUM = '#2a1638', CORAL = '#e8456b', MINT = '#9ee6cf', BUTTER = '#ffd75e', PAPER = '#fff1f5', ROSE = '#ffb6cf';
 const FONT = (px, w = 800) => `${w} ${px}px Unbounded, sans-serif`;
@@ -2327,8 +2426,108 @@ async function judo(root, ctx) {
   ctx.finish(win ? 1 : 0, forfeit ? 'forfait' : `${me}-${opp}`);
 }
 
+/* ---------------- Saut à ski : appel, vol en équilibre, réception en télémark ---------------- */
+async function sautski(root, ctx) {
+  root.innerHTML = `
+    <div class="split-top"><canvas id="cv"></canvas></div>
+    <div class="split-bot">
+      <div class="hud"><span class="big" id="b">Meilleur : —</span><span id="tr">Saut 1/2</span></div>
+      <div class="phase ph-wait" id="ph">Prépare-toi</div>
+      <div class="help" id="msg">&nbsp;</div>
+      <div class="gauge" id="gg"><div class="zone" style="left:76%;width:14%"></div><div class="foul" style="left:92%"></div><div class="arrow" id="a" style="left:0"></div></div>
+      <button class="tapzone" id="tap" disabled>…</button>
+    </div>`;
+  const cv = $(root, '#cv'), tap = $(root, '#tap'), ph = $(root, '#ph'), msg = $(root, '#msg'), a = $(root, '#a'), gg = $(root, '#gg'), bEl = $(root, '#b'), trEl = $(root, '#tr');
+  const { g, W, H } = fitCanvas(cv);
+  const T = tilt(tap, 25);
+  const phase = (c, t, s) => { ph.className = 'phase ph-' + c; ph.textContent = t; msg.textContent = s || ' '; };
+  const TX = W * 0.3, TY = H * 0.42; // nez du tremplin
+  const hillY = (x) => TY + 14 + (H * 0.95 - TY - 14) * Math.pow(Math.min(1, Math.max(0, (x - TX) / (W * 0.68))), 0.75);
+  const dX = (d) => TX + (W * 0.66) * Math.min(1, (d - 60) / 210);
+  let sk = { x: 8, y: H * 0.1, rot: 0.6 }, lean = 0, best = 0, marks = [];
+  function draw() {
+    if (!root.isConnected) return;
+    g.fillStyle = '#eaf6ff'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#c9e6f7'; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 20) g.lineTo(x, H * 0.55 + Math.sin(x / 40) * 18); g.lineTo(W, H); g.fill();
+    // élan
+    g.strokeStyle = '#2a1638'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, H * 0.08); g.quadraticCurveTo(TX * 0.6, TY - 6, TX, TY); g.stroke();
+    // piste de réception
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(TX, TY + 14); for (let x = TX; x <= W; x += 6) g.lineTo(x, hillY(x)); g.lineTo(W, H); g.lineTo(TX, H); g.fill();
+    g.strokeStyle = '#9fc9e8'; g.lineWidth = 2; g.beginPath(); for (let x = TX; x <= W; x += 6) x === TX ? g.moveTo(x, hillY(x)) : g.lineTo(x, hillY(x)); g.stroke();
+    g.font = '800 9px Unbounded, sans-serif'; g.textAlign = 'center';
+    for (const d of [120, 160, 200, 240]) { const x = dX(d); g.fillStyle = '#7cc0e6'; g.fillRect(x - 1, hillY(x) - 6, 2, 12); g.fillStyle = PLUM; g.fillText(d + ' m', x, hillY(x) + 18); }
+    const xr = dX(253.5); g.fillStyle = BUTTER; g.fillRect(xr - 2, hillY(xr) - 30, 4, 30); g.fillStyle = PLUM; g.fillText('RM', xr, hillY(xr) - 34);
+    for (const m of marks) { const x = dX(m.d); g.fillStyle = m.fall ? '#bbb' : CORAL; g.beginPath(); g.arc(x, hillY(x), 5, 0, 7); g.fill(); }
+    g.save(); g.translate(sk.x, sk.y); g.rotate(sk.rot + lean * 0.5);
+    g.strokeStyle = CORAL; g.lineWidth = 3; g.beginPath(); g.moveTo(-18, 12); g.lineTo(18, 12); g.stroke();
+    g.restore();
+    slime(g, sk.x, sk.y, 11, ctx.color(ctx.me));
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  await countdown(root);
+  for (let j = 1; j <= 2; j++) {
+    trEl.textContent = `Saut ${j}/2`; lean = 0; sk = { x: 8, y: H * 0.1, rot: 0.6 }; gg.hidden = false;
+    // ① ÉLAN + APPEL
+    phase('run', '① Appel : saute au bon moment !', 'Tape SAUTE quand la flèche est dans le vert, juste avant le rouge.');
+    tap.className = 'tapzone jumpbtn'; tap.textContent = 'SAUTE !'; tap.disabled = false;
+    const p = await new Promise((res) => {
+      const t0 = performance.now(), dur = 2300;
+      const h = (e) => { e.preventDefault(); done(); };
+      let fin = false;
+      function done() { if (fin) return; fin = true; tap.removeEventListener('pointerdown', h); res(pos()); }
+      const pos = () => Math.min(100, (performance.now() - t0) / dur * 100);
+      (function f() { if (fin || !root.isConnected) return; const k = pos() / 100; a.style.left = k * 100 + '%'; const q = Math.min(1, k / 0.92); sk.x = 8 + (TX - 8) * q; sk.y = H * 0.1 + (TY - 14 - H * 0.1) * Math.pow(q, 0.8); if (k >= 1) return done(); requestAnimationFrame(f); })();
+      tap.addEventListener('pointerdown', h);
+    });
+    tap.disabled = true; gg.hidden = true;
+    const acc = p > 92 ? 0.15 : Math.max(0.15, 1 - Math.abs(p - 84) / 18);
+    sfx('whistle'); buzz(40);
+    // ② VOL : équilibre
+    phase('jump', '② En vol : reste droit !', T.sensor ? 'Incline le téléphone pour garder les skis à plat' : 'Glisse le doigt sur le bouton pour garder les skis à plat');
+    tap.className = 'tapzone'; tap.textContent = T.sensor ? '⇆ Incline' : '⇆ Glisse'; tap.disabled = false; T.recalibrate();
+    let angle = 0, vel = 0, push = 0, sum = 0, n = 0;
+    const flyT = 3000, start = performance.now(); let last = start;
+    const target = 100 + 160 * acc; // distance visée avant équilibre
+    while (performance.now() - start < flyT) {
+      await sleep(16);
+      const now = performance.now(), dt = (now - last) / 1000; last = now;
+      if (Math.random() < dt * 2) push = (Math.random() - 0.5) * 40;
+      vel += (push + angle * 0.8 - T.value() * 60) * dt; vel *= Math.pow(0.3, dt); angle += vel * dt * 4; push *= Math.pow(0.3, dt);
+      angle = Math.max(-35, Math.min(35, angle)); lean = angle / 35;
+      sum += Math.abs(angle); n++;
+      const k = (now - start) / flyT, xd = dX(60 + (target - 60) * k);
+      sk.x = TX + (xd - TX) * k; sk.y = TY - 10 - Math.sin(k * Math.PI) * H * 0.12 + (hillY(xd) - 14 - (TY - 10)) * k * k; sk.rot = 0.25;
+    }
+    const stab = Math.max(0, 1 - sum / n / 30);
+    // ③ RÉCEPTION : télémark au bon moment
+    phase('wait', '③ Réception : TÉLÉMARK !', 'Tape quand le bouton devient vert (juste avant de toucher la neige)');
+    tap.className = 'tapzone locked'; tap.textContent = 'Attends…';
+    const land = await new Promise((res) => {
+      const t0 = performance.now(), win0 = 500 + Math.random() * 500, win1 = win0 + 450;
+      let fin = false;
+      const h = (e) => { e.preventDefault(); const t = performance.now() - t0; end(t < win0 ? 0.85 : t <= win1 ? 1 : 0.85, t < win0 ? 'Trop tôt' : t <= win1 ? 'Télémark parfait !' : 'Un peu tard'); };
+      function end(v, txt) { if (fin) return; fin = true; tap.removeEventListener('pointerdown', h); res({ v, txt }); }
+      setTimeout(() => { if (!fin) { tap.className = 'tapzone jumpbtn'; tap.textContent = 'TÉLÉMARK !'; buzz(30); } }, win0);
+      setTimeout(() => end(0.6, 'Chute à la réception…'), win1 + 900);
+      tap.addEventListener('pointerdown', h);
+    });
+    tap.disabled = true;
+    const d = Math.round((60 + (target - 60) * (0.45 + 0.55 * stab)) * land.v * 10) / 10;
+    const dist = Math.max(60, d);
+    const xd = dX(dist); sk.x = xd; sk.y = hillY(xd) - 12; sk.rot = 0.2; lean = land.v < 0.7 ? 1.5 : 0;
+    marks.push({ d: dist, fall: land.v < 0.7 });
+    if (land.v < 0.7) { sfx('fail'); buzz(200); } else { sfx(dist * 10 > best ? 'ok' : 'thud'); }
+    if (dist * 10 > best) { best = Math.round(dist * 10); bEl.textContent = 'Meilleur : ' + (best / 10).toFixed(1).replace('.', ',') + ' m'; }
+    phase('wait', `📏 ${dist.toFixed(1).replace('.', ',')} m`, `${land.txt} · appel ${Math.round(acc * 100)} % · équilibre ${Math.round(stab * 100)} %`);
+    await sleep(2200);
+  }
+  T.stop();
+  ctx.finish(best, (best / 10).toFixed(1).replace('.', ',') + ' m');
+}
+
 import * as THREE from 'three';
-const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo };
+const GAMES = { tir, hauteur, hiphop, curling, sprint, haies, cyclisme, natation, aviron, longueur, skate, basket, rugby, golf, football, handball, escrime, haltero, arc, ski, marteau, escalade, judo, hockey, patinage, bobsleigh, sautski, snowboard };
 
 /* ---------- Identité locale ---------- */
 const store = {
@@ -2364,7 +2563,7 @@ let S = null;            // état de la salle
 let runningGameId = null;
 let gameMsgHandler = null, gameInbox = [];
 let myResult = null;
-let libreEvent = 'sprint', chosenMode = 'jo';
+let libreEvent = 'sprint', chosenMode = 'totale';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const country = (code) => S?.countries.find((c) => c.code === code) || { flag: '🏳️', color: '#ccc', name: '?' };
@@ -2400,7 +2599,7 @@ function renderHome() {
   if (window.OFFLINE) {
     let nb = 7;
     app.innerHTML = `
-      <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Zozz’lympiques</span></h1>
+      <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
       <p class="sub">Entraînement contre des bots</p>
       <div class="card">
         <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
@@ -2422,7 +2621,7 @@ function renderHome() {
     return;
   }
   app.innerHTML = `
-    <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Zozz’lympiques</span></h1>
+    <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     <div class="card">
       <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
       <button id="create">Créer une partie</button>
@@ -2463,7 +2662,7 @@ function renderLobby() {
   const link = `${location.origin}${location.pathname}?r=${S.code}`;
   app.innerHTML = `
     <div class="kicker" style="margin-top:6px">Édition Taghazout</div>
-    <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Zozz’lympiques</span></h1>
+    <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     ${window.OFFLINE ? '' : `<div class="codecard"><div><div class="lbl">Code de la partie</div><div class="code">${S.code}</div></div>
       <button class="pillbtn" id="share">Partager</button></div>`}
     <section class="blk"><div class="blkhead"><h2>Athlètes</h2><span>${S.players.length} / 16</span></div>
@@ -2473,8 +2672,8 @@ function renderLobby() {
       ${S.countries.map((c) => `<button data-c="${c.code}" class="${me?.country === c.code ? 'sel' : ''}" ${!window.OFFLINE && taken.has(c.code) && me?.country !== c.code ? 'disabled' : ''} title="${c.name}" aria-label="${c.name}">${c.flag}</button>`).join('')}
     </div><div class="muted" style="margin-top:6px">${country(me?.country).name}</div></section>
     ${host ? `<section class="blk"><h2>Programme</h2>
-      <div class="tiles">${Object.entries(S.modes).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i} ${chosenMode === k ? 'sel' : ''} ${k === 'jo' ? 'wide' : ''}"><b>${String(k === 'libre' ? 1 : k === 'jo' ? Object.keys(S.events).length : mo.count).padStart(2, '0')}</b><span>${k === 'jo' ? 'Mode J.O. · toutes les épreuves' : mo.name}</span></button>`).join('')}</div>
-      ${chosenMode === 'libre' ? `<div class="chips" style="margin-top:10px">${Object.entries(S.events).map(([k, e]) => `<button data-e="${k}" class="${libreEvent === k ? 'sel' : ''}">${e.name}</button>`).join('')}</div>` : ''}
+      <div class="tiles">${Object.entries(S.modes).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i % 5} ${chosenMode === k ? 'sel' : ''} ${mo.all ? 'wide' : ''}"><b>${String(modeCount(k)).padStart(2, '0')}</b><span>${mo.name}</span></button>`).join('')}</div>
+      ${chosenMode === 'libre' ? [['ete', '☀️ Été'], ['hiver', '❄️ Hiver']].map(([s, t]) => `<div class="seasonlbl">${t}</div><div class="chips">${Object.entries(S.events).filter(([, e]) => e.season === s).map(([k, e]) => `<button data-e="${k}" class="${libreEvent === k ? 'sel' : ''}">${e.name}</button>`).join('')}</div>`).join('') : ''}
       <div class="muted" style="margin:10px 0">${modeHint()}</div>
       <button class="cta" id="start">Lancer les jeux <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></section>`
     : `<div class="card muted">En attente de l'hôte pour lancer…</div>`}
@@ -2486,43 +2685,55 @@ function renderLobby() {
   if (st) st.onclick = () => socket.emit('start', { mode: chosenMode, event: libreEvent });
   document.getElementById('leave').onclick = () => { socket.emit('leave'); store.del('bg_room'); S = null; history.replaceState(null, '', location.pathname); render(); scene3d.sync(); };
   const sh = document.getElementById('share'); if (sh) sh.onclick = async () => {
-    try { if (navigator.share) await navigator.share({ title: 'Les Jeux Zozz’lympiques', text: `Rejoins les Jeux Zozz’lympiques ! Code ${S.code}`, url: link }); else { await navigator.clipboard.writeText(link); toast('Lien copié !'); } } catch {}
+    try { if (navigator.share) await navigator.share({ title: 'Les Jeux Ose’Lympiques', text: `Rejoins les Jeux Ose’Lympiques ! Code ${S.code}`, url: link }); else { await navigator.clipboard.writeText(link); toast('Lien copié !'); } } catch {}
   };
 }
+function modeCount(k) {
+  const mo = S.modes[k], evs = Object.values(S.events);
+  if (k === 'libre') return 1;
+  if (mo.count) return mo.count;
+  return mo.all ? evs.length : evs.filter((e) => e.season === mo.season).length;
+}
 function modeHint() {
-  const n = Object.keys(S.events).length;
-  const m = S.modes[chosenMode];
+  const mo = S.modes[chosenMode], n = modeCount(chosenMode);
   if (chosenMode === 'libre') return '1 épreuve au choix';
-  if (chosenMode === 'jo') return `Toutes les épreuves (${n}) dans un ordre aléatoire`;
-  return `${m.name} : ${Math.min(m.count, n)} épreuve(s) au hasard${m.count > n ? ` (V1 : ${n} disponibles)` : ''}`;
+  if (mo.season === 'ete') return `Toutes les épreuves d'été (${n}) dans un ordre aléatoire`;
+  if (mo.season === 'hiver') return `Toutes les épreuves d'hiver (${n}) dans un ordre aléatoire`;
+  if (mo.all) return `La totale : les ${n} épreuves, été et hiver, dans un ordre aléatoire`;
+  return `${mo.name} : ${n} épreuves tirées au hasard (été et hiver)`;
 }
 
 /* ---------- Records ---------- */
-// Vrais records du monde quand l'épreuve s'y prête, sinon record Zozz’lympique à battre.
+// Vrais records du monde quand l'épreuve s'y prête, sinon record Ose’Lympique à battre.
 const fs = (v) => v.toFixed(2).replace('.', ',') + ' s', fm = (v) => v.toFixed(2).replace('.', ',') + ' m';
 const RECORDS = {
   sprint: { who: 'Usain Bolt 🇯🇲', value: 9.58, lower: true, fmt: fs, world: true },
   haies: { who: 'Aries Merritt 🇺🇸', value: 12.8, lower: true, fmt: fs, world: true },
   hauteur: { who: 'Javier Sotomayor 🇨🇺', value: 2.45, fmt: fm, world: true },
   longueur: { who: 'Mike Powell 🇺🇸', value: 8.95, fmt: fm, world: true },
-  tir: { who: 'Record Zozz’lympique', value: 8.5, lower: true, fmt: fs },
-  hiphop: { who: 'Record Zozz’lympique', value: 300, fmt: (v) => Math.round(v) + ' pts' },
-  cyclisme: { who: 'Record Zozz’lympique', value: 10, lower: true, fmt: fs },
-  natation: { who: 'Record Zozz’lympique', value: 28, lower: true, fmt: fs },
-  aviron: { who: 'Record Zozz’lympique', value: 15, lower: true, fmt: fs },
-  skate: { who: 'Record Zozz’lympique', value: 620, fmt: (v) => Math.round(v) + ' pts' },
-  golf: { who: 'Record Zozz’lympique', value: 5, lower: true, fmt: (v) => v + ' coups' },
+  tir: { who: 'Record Ose’Lympique', value: 7, lower: true, fmt: fs },
+  hiphop: { who: 'Record Ose’Lympique', value: 330, fmt: (v) => Math.round(v) + ' pts' },
+  cyclisme: { who: 'Record Ose’Lympique', value: 7.5, lower: true, fmt: fs },
+  natation: { who: 'Record Ose’Lympique', value: 14, lower: true, fmt: fs },
+  aviron: { who: 'Record Ose’Lympique', value: 17, lower: true, fmt: fs },
+  skate: { who: 'Record Ose’Lympique', value: 700, fmt: (v) => Math.round(v) + ' pts' },
+  golf: { who: 'Record Ose’Lympique', value: 6, lower: true, fmt: (v) => v + ' coups' },
   haltero: { who: 'Lasha Talakhadze 🇬🇪 (arraché)', value: 225, fmt: (v) => Math.round(v) + ' kg', world: true },
   marteau: { who: 'Iouri Sedykh 🇺🇦', value: 86.74, fmt: fm, world: true },
-  arc: { who: 'Record Zozz’lympique', value: 84, fmt: (v) => Math.round(v) + ' pts' },
-  ski: { who: 'Record Zozz’lympique', value: 19, lower: true, fmt: fs },
-  escalade: { who: 'Record Zozz’lympique', value: 6, lower: true, fmt: fs },
+  arc: { who: 'Record Ose’Lympique', value: 82, fmt: (v) => Math.round(v) + ' pts' },
+  ski: { who: 'Record Ose’Lympique', value: 18.6, lower: true, fmt: fs },
+  escalade: { who: 'Record Ose’Lympique', value: 5.5,
+  patinage: { who: 'Record Ose’Lympique', value: 9, lower: true, fmt: fs },
+  bobsleigh: { who: 'Record Ose’Lympique', value: 14, lower: true, fmt: fs },
+  snowboard: { who: 'Record Ose’Lympique', value: 700, fmt: (v) => Math.round(v) + ' pts' },
+  sautski: { who: 'Stefan Kraft 🇦🇹', value: 253.5, fmt: (v) => v.toFixed(1).replace('.', ',') + ' m', world: true }, lower: true, fmt: fs },
 };
-const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade'];
+const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
 function rawValue(ev, score) {
   if (TIMED.includes(ev) || ev === 'golf') return -score;
   if (ev === 'hauteur') return Math.ceil(score / 100) / 100; // cm -> m
   if (ev === 'longueur' || ev === 'marteau') return score / 100;
+  if (ev === 'sautski') return score / 10;
   if (ev === 'haltero') return Math.ceil(score / 100);
   return score;
 }
@@ -2553,13 +2764,18 @@ const RULES = {
   handball: { but: 'Duel de jets à 7 m : 5 tirs chacun, en alternance.', ecran: 'En haut : le but et le gardien. En bas : une grille de 9 zones.', gestes: ['Tireur : choisis une zone (✖ = déjà utilisée, interdite).', 'Gardien : choisis où plonger (⚽ = zones où l\'adversaire a déjà tiré, il ne peut plus y viser).', 'Même zone = arrêt, sinon but. 10 s pour choisir.'], score: 'Le plus de buts gagne, mort subite en cas d\'égalité. Victoire = 10 pts, défaite = 8 pts.' },
   rugby: { but: 'Passer un maximum de pénalités sur 5, de plus en plus loin (22 à 45 m).', ecran: 'Les perches en haut (la zone verte entre elles), le ballon en bas.', gestes: ['Pose le doigt sur le ballon.', 'Glisse-le vers les perches et relâche.', 'La direction vise ; plus c\'est loin, plus le geste doit être vif.'], score: 'Au nombre de pénalités réussies.' },
   escrime: { but: 'Duel au fleuret : toucher 3 fois l\'adversaire.', ecran: 'En haut : les deux escrimeurs. En bas : 3 boutons Haut, Milieu, Bas.', gestes: ['L\'attaquant et le défenseur choisissent une zone en même temps (10 s).', 'Même zone = parade : le défenseur devient l\'attaquant.', 'Zones différentes = touche pour l\'attaquant.'], score: 'Premier à 3 touches. Victoire = 10 pts, défaite = 8 pts.' },
-  golf: { but: 'Mini-golf : 3 trous en le moins de coups possible.', ecran: 'Le parcours vu de dessus, avec son nom en haut (tirés au sort parmi 9, les mêmes pour tous).', gestes: ['Pose le doigt n\'importe où et glisse vers l\'arrière : une ligne de visée apparaît.', 'Plus tu tires loin, plus le coup est fort. Relâche pour putter.', 'Les murs roses font rebondir la balle. 7 coups max par trou (+1 de pénalité).'], score: 'Le moins de coups au total.' },
+  golf: { but: 'Mini-golf : 3 trous en le moins de coups possible.', ecran: 'Le parcours vu de dessus, avec son nom en haut (tirés au sort parmi 9, les mêmes pour tous).', gestes: ['Pose le doigt n\'importe où et glisse vers l\'arrière : une ligne de visée apparaît.', 'Plus tu tires loin, plus le coup est fort. Relâche pour putter.', 'Les murs roses font rebondir la balle. 10 coups max par trou (+1 de pénalité).'], score: 'Le moins de coups au total.' },
   hiphop: { but: 'Danser 1 minute en tapant les bonnes touches au bon moment.', ecran: 'En haut : 4 colonnes où descendent des blocs colorés et une ligne blanche. En bas : 4 boutons flèches.', gestes: ['Un bloc descend dans une colonne.', 'Quand il passe sur la ligne blanche, tape le bouton de la même colonne.', 'Ça accélère au fil de la minute.'], score: 'Parfait = 3 pts, Bien = 1 pt. Le plus de points gagne.' },
   haltero: { but: 'Soulever la barre la plus lourde (100 kg, puis +10 kg à chaque réussite).', ecran: 'En haut : ton slime et la barre. En bas : un bandeau de phase, une jauge et le gros bouton.', gestes: ['① Bandeau rose « Soulève » : tape vite pour remplir la jauge en 3 s.', '② Bandeau vert « Équilibre » : la barre penche toute seule. Incline le téléphone (ou glisse le doigt) pour la garder droite 3 s.', 'Au-delà de 25°, elle tombe. 3 échecs de suite = fin.'], score: 'À la barre la plus lourde. Conseil : verrouille la rotation de l\'écran.' },
   arc: { but: 'Marquer le plus de points en 3 volées de 3 flèches.', ecran: 'La cible au centre, ton viseur qui bouge, le vent en haut à gauche.', gestes: ['Garde le doigt posé : tu bandes l\'arc et le viseur se calme.', 'Si tu tiens trop longtemps, il se remet à trembler.', 'Relâche pour tirer. Téléphone immobile = viseur plus stable. Tiens compte du vent.'], score: 'Au total des points (10 au centre).' },
   ski: { but: 'Descendre le slalom de 20 portes le plus vite possible.', ecran: 'La piste vue de dessus, ton skieur en bas, les portes qui arrivent.', gestes: ['Incline le téléphone à gauche ou à droite pour tourner.', 'Sinon, garde le doigt sur la piste et glisse à gauche ou à droite.', 'Passe entre les deux drapeaux de chaque porte.'], score: 'Au temps, +2 s par porte manquée.' },
   marteau: { but: 'Lancer le marteau le plus loin, en 3 essais.', ecran: 'En haut : le terrain et les distances. En bas : une roue avec une zone verte en haut.', gestes: ['Fais des cercles sur la roue, de plus en plus vite (au moins 3 tours).', 'Lève le doigt quand la boule passe dans la zone verte.', 'Ailleurs = dans la cage, essai nul.'], score: 'À la meilleure distance.' },
   escalade: { but: 'Grimper le mur de 15 m le plus vite possible.', ecran: 'En haut : les couloirs des grimpeurs, la prochaine prise de ton couloir en corail. En bas : ta position et les boutons ◀ et ▶.', gestes: ['Regarde de quel côté est la prise allumée.', 'Tape ◀ si elle est à gauche, ▶ si elle est à droite.', 'Mauvais côté = tu glisses d\'une prise et tu es bloqué un instant.'], score: 'Au temps.' },
+  hockey: { but: 'Duel façon air-hockey sur glace : marquer dans la cage adverse.', ecran: 'La patinoire vue de dessus : toi en bas, l\'adversaire en haut, le palet noir.', gestes: ['Garde le doigt sur l\'écran : ton slime suit ton doigt.', 'Frappe le palet en fonçant dessus : il glisse beaucoup plus qu\'un ballon.', 'Tu ne peux pas dépasser la ligne du milieu.'], score: 'Premier à 3 buts (2 min, puis but en or). Victoire = 10 pts, défaite = 8 pts.' },
+  patinage: { but: 'Patiner 500 m le plus vite possible.', ecran: 'En haut : l\'anneau de glace vu de côté. En bas : ta position et deux boutons G et D.', gestes: ['Tape G puis D puis G… en alternant : chaque bonne poussée = 5 m.', 'Deux fois le même pied = tu glisses et tu n\'avances presque pas.', 'Trouve un rythme régulier plutôt que de taper n\'importe comment.'], score: 'Au temps.' },
+  bobsleigh: { but: 'Descendre la piste de 1 200 m le plus vite possible.', ecran: 'En haut : la piste. En bas : un bandeau qui annonce les virages et deux boutons ⬅ ➡.', gestes: ['① Poussée (3 s) : tape vite sur les boutons, ta vitesse de départ en dépend.', '② Descente : un virage s\'annonce et le bon bouton devient vert.', 'Tape-le vite (moins d\'une seconde) : bonne trajectoire = tu accélères. Raté ou trop tard = tu tapes la paroi et tu ralentis.'], score: 'Au temps.' },
+  sautski: { but: 'Sauter le plus loin, en 2 sauts.', ecran: 'En haut : le tremplin et la piste de réception. En bas : un bandeau de phase, une jauge et le gros bouton.', gestes: ['① Appel : la flèche avance une seule fois. Tape SAUTE dans le vert, juste avant le rouge.', '② Vol (3 s) : incline le téléphone (ou glisse le doigt) pour garder les skis à plat.', '③ Réception : attends que le bouton devienne vert et tape TÉLÉMARK. Trop tôt ou trop tard coûte des mètres ; pas de télémark = chute.'], score: 'Au meilleur saut.' },
+  snowboard: { but: 'Réussir 6 figures de plus en plus longues dans le halfpipe.', ecran: 'En haut : le halfpipe enneigé. En bas : la séquence de flèches et 4 boutons flèches.', gestes: ['Regarde : les flèches s\'allument une par une et restent visibles.', 'Elles se cachent : reproduis la séquence avec les boutons, en 10 s.', 'Une erreur = figure ratée, on passe à la suivante.'], score: 'Chaque figure réussie = 100 pts + bonus de rapidité.' },
   judo: { but: 'Duel de réflexes au meilleur des 5 manches.', ecran: 'En haut : les deux judokas. En bas : un bandeau et un gros bouton gris « Attends… ».', gestes: ['Ne touche à rien tant que le bouton est gris.', 'Au signal « HAJIME ! », le bouton devient vert : tape le plus vite possible.', 'Taper avant le signal = faux départ, point perdu.'], score: 'Premier à 3 manches. Victoire = 10 pts, défaite = 8 pts.' },
 };
 let gameStarted = false;
@@ -2574,14 +2790,14 @@ function renderEvent() {
     <div class="title" style="margin-top:6px">Épreuve ${cur.index + 1}/${cur.count}</div>
     <h1 class="logo" style="margin:10px 0 14px;font-size:44px">${esc(ev.name)}</h1>
     ${rulesHTML(cur.event)}
-    <button class="ghost" id="try" ${triedId === cur.id ? 'hidden' : ''}>🎮 Faire un essai de 30 s (une seule fois, ne compte pas)</button>
+    <button class="ghost" id="try" ${triedId === cur.id ? 'hidden' : ''}>🎮 Essai de 30 s<small>une seule fois · ne compte pas</small></button>
     <div id="rec"></div>
     <div class="card" id="rdy"></div>
     <button id="ready">✔ J'ai compris, prêt !</button>`;
   if (strip) document.getElementById('rec').append(strip);
   scene3d.setEvent(cur.event);
   document.getElementById('try').onclick = () => practice(cur);
-  document.getElementById('ready').onclick = () => { sound.unlock(); sfx('tick'); if (['haltero', 'arc', 'ski'].includes(cur.event)) requestSensors(); socket.emit('ready'); };
+  document.getElementById('ready').onclick = () => { sound.unlock(); sfx('tick'); if (['haltero', 'arc', 'ski', 'sautski'].includes(cur.event)) requestSensors(); socket.emit('ready'); };
   updateRules();
   if (cur.go) startGame();
 }
@@ -2599,7 +2815,7 @@ let triedId = null;
 function practice(cur) {
   if (triedId === cur.id) return;
   triedId = cur.id; // un seul essai par épreuve
-  if (['haltero', 'arc', 'ski'].includes(cur.event)) requestSensors();
+  if (['haltero', 'arc', 'ski', 'sautski'].includes(cur.event)) requestSensors();
   sound.unlock();
   const ov = document.createElement('div');
   ov.className = 'game practice';
@@ -2698,7 +2914,7 @@ function updateWait() {
   if (!w) { w = document.createElement('div'); w.id = 'wait'; w.className = 'card wait'; document.body.appendChild(w); }
   const connected = S.players.filter((p) => p.connected);
   const done = connected.filter((p) => S.done.includes(p.id)).length;
-  const nr = myResult.flag === 'wr' ? '<div class="newrec">🔥 Nouveau record ' + (RECORDS[S.current.event]?.world ? 'du monde' : 'Zozz’lympique') + ' !</div>'
+  const nr = myResult.flag === 'wr' ? '<div class="newrec">🔥 Nouveau record ' + (RECORDS[S.current.event]?.world ? 'du monde' : 'Ose’Lympique') + ' !</div>'
     : myResult.flag === 'pb' ? '<div class="newrec">Record perso battu !</div>' : '';
   w.innerHTML = nr + `<b>Terminé : ${esc(myResult.detail || '')}</b><div class="muted">En attente des autres… ${done}/${connected.length}</div>`;
 }
@@ -2757,7 +2973,7 @@ function renderReveal() {
     if (duel) for (const x of r.ranking) { if (x.rank === 1) groups[0].push({ p: player(x.id), sub: '+10 pts' }); }
     else for (const x of r.ranking) if (x.rank && x.rank <= 3 && player(x.id)) groups[x.rank - 1].push({ p: player(x.id), sub: x.detail || '' });
     const meRow = r.ranking.find((x) => x.id === pid);
-    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade'];
+    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
     const top = r.ranking.filter((x) => x.score != null).slice(0, 3);
     const pf = RACE.includes(r.event) && top.length >= 2 && Math.abs(top[0].score - top[1].score) <= 0.15;
     app.innerHTML = `

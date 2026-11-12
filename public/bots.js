@@ -1,4 +1,4 @@
-// Jeux Zozz’lympiques hors-ligne : un faux serveur + des bots, entièrement dans la page (aucune connexion nécessaire).
+// Jeux Ose’Lympiques hors-ligne : un faux serveur + des bots, entièrement dans la page (aucune connexion nécessaire).
 window.makeBotSocket = function () {
   const handlers = {};
   const sock = { on(e, f) { (handlers[e] ??= []).push(f); }, emit(e, d) { setTimeout(() => srv(e, d || {}), 0); }, disconnect() { clearT(); room = null; } };
@@ -16,31 +16,52 @@ window.makeBotSocket = function () {
     { code: 'MA', name: 'Maroc', flag: '🇲🇦', color: '#0b6e4f' }, { code: 'NZ', name: 'Nouvelle-Zélande', flag: '🇳🇿', color: '#2ec4b6' },
   ];
   const EVENTS = {
-  sprint: { name: '100 m', type: 'solo' },
-  haies: { name: '110 m haies', type: 'solo' },
-  cyclisme: { name: 'Cyclisme sur piste', type: 'solo' },
-  natation: { name: 'Natation 4 nages', type: 'solo' },
-  aviron: { name: 'Aviron', type: 'solo' },
-  hauteur: { name: 'Saut en hauteur', type: 'solo' },
-  longueur: { name: 'Saut en longueur', type: 'solo' },
-  tir: { name: 'Tir de vitesse', type: 'solo' },
-  curling: { name: 'Curling', type: 'duel' },
-  football: { name: 'Football', type: 'duel' },
-  skate: { name: 'Skateboard', type: 'solo' },
-  basket: { name: 'Basketball', type: 'solo' },
-  handball: { name: 'Handball', type: 'duel' },
-  rugby: { name: 'Rugby', type: 'solo' },
-  escrime: { name: 'Escrime', type: 'duel' },
-  golf: { name: 'Mini-golf', type: 'solo' },
-  haltero: { name: 'Haltérophilie', type: 'solo' },
-  arc: { name: "Tir à l'arc", type: 'solo' },
-  ski: { name: 'Ski slalom', type: 'solo' },
-  marteau: { name: 'Lancer du marteau', type: 'solo' },
-  escalade: { name: 'Escalade', type: 'solo' },
-  judo: { name: 'Judo', type: 'duel' },
-  hiphop: { name: 'Hip-Hop', type: 'solo' },
+  // Été
+  sprint: { name: '100 m', type: 'solo', season: 'ete' },
+  haies: { name: '110 m haies', type: 'solo', season: 'ete' },
+  cyclisme: { name: 'Cyclisme sur piste', type: 'solo', season: 'ete' },
+  natation: { name: 'Natation 4 nages', type: 'solo', season: 'ete' },
+  aviron: { name: 'Aviron', type: 'solo', season: 'ete' },
+  hauteur: { name: 'Saut en hauteur', type: 'solo', season: 'ete' },
+  longueur: { name: 'Saut en longueur', type: 'solo', season: 'ete' },
+  tir: { name: 'Tir de vitesse', type: 'solo', season: 'ete' },
+  football: { name: 'Football', type: 'duel', season: 'ete' },
+  skate: { name: 'Skateboard', type: 'solo', season: 'ete' },
+  basket: { name: 'Basketball', type: 'solo', season: 'ete' },
+  handball: { name: 'Handball', type: 'duel', season: 'ete' },
+  rugby: { name: 'Rugby', type: 'solo', season: 'ete' },
+  escrime: { name: 'Escrime', type: 'duel', season: 'ete' },
+  golf: { name: 'Mini-golf', type: 'solo', season: 'ete' },
+  haltero: { name: 'Haltérophilie', type: 'solo', season: 'ete' },
+  arc: { name: "Tir à l'arc", type: 'solo', season: 'ete' },
+  marteau: { name: 'Lancer du marteau', type: 'solo', season: 'ete' },
+  escalade: { name: 'Escalade', type: 'solo', season: 'ete' },
+  judo: { name: 'Judo', type: 'duel', season: 'ete' },
+  hiphop: { name: 'Hip-Hop', type: 'solo', season: 'ete' },
+  // Hiver
+  ski: { name: 'Ski slalom', type: 'solo', season: 'hiver' },
+  curling: { name: 'Curling', type: 'duel', season: 'hiver' },
+  hockey: { name: 'Hockey sur glace', type: 'duel', season: 'hiver' },
+  patinage: { name: 'Patinage de vitesse', type: 'solo', season: 'hiver' },
+  bobsleigh: { name: 'Bobsleigh', type: 'solo', season: 'hiver' },
+  sautski: { name: 'Saut à ski', type: 'solo', season: 'hiver' },
+  snowboard: { name: 'Snowboard halfpipe', type: 'solo', season: 'hiver' },
 };
-  const MODES = { libre: { name: 'Jeu libre', count: 1 }, penta: { name: 'Pentathlon', count: 5 }, hepta: { name: 'Heptathlon', count: 7 }, deca: { name: 'Décathlon', count: 10 }, jo: { name: 'Mode J.O.', count: Infinity } };
+  const MODES = {
+  libre: { name: 'Jeu libre', count: 1 },
+  penta: { name: 'Pentathlon', count: 5 },
+  hepta: { name: 'Heptathlon', count: 7 },
+  deca: { name: 'Décathlon', count: 10 },
+  ete: { name: "J.O. d'été", season: 'ete' },
+  hiver: { name: "J.O. d'hiver", season: 'hiver' },
+  totale: { name: 'Jeux Ose’Lympiques · la totale', all: true },
+};
+function pickProgram(mode) {
+  const m = MODES[mode];
+  const keys = Object.keys(EVENTS).filter((k) => m.all || !m.season || EVENTS[k].season === m.season);
+  const list = shuffle(keys);
+  return m.count ? list.slice(0, m.count) : list;
+}
   const POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
   const BOT_NAMES = ['Gloop', 'Bloby', 'Squishy', 'Gommo', 'Bulle', 'Pâtou', 'Slimo', 'Jello', 'Mochi', 'Fizz', 'Wobble', 'Chewie', 'Pop', 'Glu', 'Flubb'];
   const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -58,7 +79,7 @@ window.makeBotSocket = function () {
 
   const t2 = (t) => ({ score: -Math.round(t * 100) / 100, detail: t.toFixed(2) + ' s' });
   function botResult(ev) {
-    const race = { sprint: [8.5, 15], haies: [11, 20], cyclisme: [8, 16], natation: [26, 45], aviron: [14, 26], tir: [9, 18], escalade: [6.5, 12], ski: [18, 30] }[ev];
+    const race = { sprint: [9.5, 15], haies: [12, 20], cyclisme: [8, 16], natation: [15, 26], aviron: [17.5, 28], tir: [7.5, 16], escalade: [6, 12], ski: [18.6, 30], patinage: [10.5, 18], bobsleigh: [16, 26] }[ev];
     if (race) { const t = rnd(...race); return { delay: t * 1000 + 2600, t, ...t2(t) }; }
     switch (ev) {
       case 'hauteur': { const k = Math.floor(rnd(0, 9)), f = Math.floor(rnd(3, 6)); const h = k ? 150 + (k - 1) * 10 : 0; return { delay: rnd(8, 25) * 1000, score: h * 100 - f, detail: h ? (h / 100).toFixed(2).replace('.', ',') + ' m' : '0 m' }; }
@@ -66,6 +87,8 @@ window.makeBotSocket = function () {
       case 'hiphop': { const s = Math.floor(rnd(60, 260)); return { delay: 62600, score: s, detail: s + ' pts' }; }
       case 'skate': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'basket': case 'rugby': { const n = Math.floor(rnd(1, 6)); return { delay: rnd(14, 24) * 1000, score: n, detail: n + '/5' }; }
+      case 'sautski': { const m = Math.round(rnd(130, 245) * 10) / 10; return { delay: rnd(25, 40) * 1000, score: Math.round(m * 10), detail: m.toFixed(1).replace('.', ',') + ' m' }; }
+      case 'snowboard': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'haltero': { const kg = 100 + 10 * Math.floor(rnd(0, 11)); return { delay: rnd(25, 60) * 1000, score: kg * 100 - Math.floor(rnd(3, 6)), detail: kg + ' kg' }; }
       case 'arc': { const s = Math.floor(rnd(40, 85)); return { delay: rnd(30, 50) * 1000, score: s, detail: s + ' pts' }; }
       case 'marteau': { const cm = Math.round(rnd(5200, 8500)); return { delay: rnd(15, 25) * 1000, score: cm, detail: (cm / 100).toFixed(2).replace('.', ',') + ' m' }; }
@@ -168,8 +191,7 @@ window.makeBotSocket = function () {
     }
     if (e === 'start') {
       if (room.phase === 'final') for (const p of room.players.values()) { p.total = 0; p.medals = [0, 0, 0]; }
-      const all = Object.keys(EVENTS);
-      room.program = d.mode === 'libre' ? [d.event] : shuffle(all).slice(0, Math.min(MODES[d.mode].count, all.length));
+      room.program = d.mode === 'libre' ? [d.event] : pickProgram(d.mode);
       room.mode = d.mode; room.index = 0;
       return startEvent();
     }

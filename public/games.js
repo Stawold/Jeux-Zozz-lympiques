@@ -1,4 +1,4 @@
-// Jeux Zozz’lympiques — épreuves V1 (tir, hauteur, hip-hop, curling)
+// Jeux Ose’Lympiques — épreuves V1 (tir, hauteur, hip-hop, curling)
 import { sleep, $, countdown, fitCanvas, liveStandings , sfx, buzz} from './kit.js';
 
 /* ---------------- Tir de vitesse (écran partagé) ---------------- */

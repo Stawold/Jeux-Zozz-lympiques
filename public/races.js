@@ -1,6 +1,6 @@
-// Jeux Zozz’lympiques — moteur de course partagé (vue de côté en haut, position en direct en bas)
+// Jeux Ose’Lympiques — moteur de course partagé (vue de côté en haut, position en direct en bas)
 // + les 5 courses : 100 m, 110 m haies, cyclisme sur piste, natation 4 nages, aviron.
-import { sleep, $, countdown, fitCanvas, liveStandings , sfx} from './kit.js';
+import { sleep, $, countdown, fitCanvas, liveStandings, sfx, buzz } from './kit.js';
 
 const THEMES = {
   sprint:   { track: '#ffb6cf', line: '#ffffff', len: 100, marks: [25, 50, 75], unit: 'm' },
@@ -8,6 +8,8 @@ const THEMES = {
   cyclisme: { track: '#e9b98a', line: '#4a7bd6', len: 1000, marks: [250, 500, 750], unit: 'm', gear: 'bike' },
   natation: { track: '#7fd3f5', line: 'rope', len: 200, marks: [50, 100, 150], unit: 'm', gear: 'swim' },
   aviron:   { track: '#5fb3e3', line: 'rgba(255,255,255,.5)', len: 2000, marks: [500, 1000, 1500], unit: 'm', gear: 'boat' },
+  patinage: { track: '#e3f4ff', line: '#7cc0e6', len: 500, marks: [100, 200, 300, 400], unit: 'm' },
+  bobsleigh: { track: '#eaf6ff', line: '#9fc9e8', len: 1200, marks: [300, 600, 900], unit: 'm', gear: 'bob' },
 };
 
 function drawSlime(g, cx, cy, r, color, gear, hop, t) {
@@ -18,6 +20,11 @@ function drawSlime(g, cx, cy, r, color, gear, hop, t) {
       g.beginPath(); const a = t * 12; g.moveTo(cx + s * r * 0.9 + Math.cos(a) * r * 0.5, cy + r * 0.55 + Math.sin(a) * r * 0.5); g.lineTo(cx + s * r * 0.9 - Math.cos(a) * r * 0.5, cy + r * 0.55 - Math.sin(a) * r * 0.5); g.stroke();
     }
     hop = 0; cy -= r * 0.25;
+  }
+  if (gear === 'bob') { // bob
+    g.fillStyle = '#e8456b'; g.beginPath(); g.moveTo(cx - r * 1.6, cy + r * 0.2); g.lineTo(cx + r * 1.2, cy + r * 0.2); g.quadraticCurveTo(cx + r * 2, cy + r * 0.5, cx + r * 1.2, cy + r * 0.9); g.lineTo(cx - r * 1.6, cy + r * 0.9); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = '#2a1638'; g.beginPath(); g.moveTo(cx - r * 1.5, cy + r * 1.05); g.lineTo(cx + r * 1.3, cy + r * 1.05); g.stroke();
+    hop = 0;
   }
   if (gear === 'boat') { // coque + avirons
     g.fillStyle = '#fff1f5'; g.beginPath(); g.moveTo(cx - r * 1.8, cy + r * 0.5); g.lineTo(cx + r * 2, cy + r * 0.5); g.lineTo(cx + r * 1.4, cy + r * 0.9); g.lineTo(cx - r * 1.4, cy + r * 0.9); g.closePath(); g.fill(); g.stroke();
@@ -274,4 +281,63 @@ export async function aviron(root, ctx) {
     }
   });
   rz.addEventListener('pointerup', () => { y0 = null; });
+}
+
+/* ---------- Patinage de vitesse 500 m : alterner pied gauche / pied droit ---------- */
+export async function patinage(root, ctx) {
+  const R = raceScreen(root, ctx, 'patinage');
+  R.ctl.innerHTML = `<div class="duo"><button class="tapzone" id="L" disabled>◀ G</button><button class="tapzone" id="Rb" disabled>D ▶</button></div>
+    <div class="help" id="hint">Alterne gauche, droite, gauche… Deux fois le même pied = tu glisses.</div>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), hint = $(root, '#hint'), ok = limiter(14);
+  let last = -1;
+  await R.go(); L.disabled = Rb.disabled = false;
+  const stride = (side) => (e) => {
+    e.preventDefault(); if (!ok()) return;
+    if (side === last) { R.advance(1); R.trip(); sfx('fail'); hint.textContent = '💥 Même pied deux fois : tu glisses !'; }
+    else { R.advance(5); hint.textContent = side ? 'Pied droit… gauche maintenant !' : 'Pied gauche… droit maintenant !'; }
+    last = side;
+  };
+  L.addEventListener('pointerdown', stride(0)); Rb.addEventListener('pointerdown', stride(1));
+  R.onFinish = () => { L.disabled = Rb.disabled = true; };
+}
+
+/* ---------- Bobsleigh : poussée au départ puis virages au bon côté ---------- */
+export async function bobsleigh(root, ctx) {
+  const R = raceScreen(root, ctx, 'bobsleigh');
+  R.ctl.innerHTML = `<div class="phase ph-run" id="ph">① Poussée : tape vite !</div>
+    <div class="duo"><button class="tapzone" id="L" disabled>⬅</button><button class="tapzone" id="Rb" disabled>➡</button></div>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), ph = $(root, '#ph'), ok = limiter(15);
+  await R.go(); L.disabled = Rb.disabled = false;
+  // Phase 1 : poussée (3 s), les deux boutons comptent
+  let taps = 0, phase = 'push', want = -1, deadline = 0, speed = 0, nextCurve = Infinity;
+  const onTap = (side) => (e) => {
+    e.preventDefault();
+    if (phase === 'push') { if (ok()) { taps++; R.advance(0.6); } return; }
+    if (want < 0) return;
+    if (side === want) { speed = Math.min(130, speed + 6); sfx('tick'); ph.className = 'phase ph-jump'; ph.textContent = '✅ Bonne trajectoire !'; }
+    else { speed = Math.max(40, speed - 20); R.trip(); sfx('fail'); ph.className = 'phase ph-run'; ph.textContent = '💥 Tu tapes la paroi !'; }
+    want = -1; nextCurve = performance.now() + 700 + Math.random() * 900; L.className = Rb.className = 'tapzone';
+  };
+  L.addEventListener('pointerdown', onTap(0)); Rb.addEventListener('pointerdown', onTap(1));
+  await sleep(3000);
+  phase = 'run'; speed = 40 + Math.min(30, taps) * 2;
+  ph.className = 'phase ph-wait'; ph.textContent = `Vitesse de départ : ${Math.round(speed)} km/h · suis les virages !`;
+  let lastT = performance.now(); nextCurve = performance.now() + 1200;
+  await new Promise((res) => {
+    function frame(t) {
+      if (!root.isConnected || R.finished) return res();
+      const dt = Math.max(0, Math.min(0.05, (t - lastT) / 1000)); lastT = t;
+      R.advance(speed / 3.6 * dt * 3); // échelle de jeu : ~12 à 20 s de descente
+      if (want < 0 && t > nextCurve) {
+        want = Math.random() < 0.5 ? 0 : 1; deadline = t + 900;
+        (want ? Rb : L).className = 'tapzone jumpbtn'; (want ? L : Rb).className = 'tapzone';
+        ph.className = 'phase ph-wait'; ph.textContent = want ? 'Virage à DROITE ➡' : '⬅ Virage à GAUCHE';
+        buzz(30);
+      }
+      if (want >= 0 && t > deadline) { speed = Math.max(40, speed - 20); R.trip(); sfx('fail'); ph.className = 'phase ph-run'; ph.textContent = '💥 Trop tard, tu tapes la paroi !'; want = -1; nextCurve = t + 700 + Math.random() * 900; L.className = Rb.className = 'tapzone'; }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+  L.disabled = Rb.disabled = true;
 }

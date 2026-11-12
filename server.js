@@ -33,37 +33,52 @@ const COUNTRIES = [
 
 // Les 17 épreuves
 const EVENTS = {
-  sprint: { name: '100 m', type: 'solo' },
-  haies: { name: '110 m haies', type: 'solo' },
-  cyclisme: { name: 'Cyclisme sur piste', type: 'solo' },
-  natation: { name: 'Natation 4 nages', type: 'solo' },
-  aviron: { name: 'Aviron', type: 'solo' },
-  hauteur: { name: 'Saut en hauteur', type: 'solo' },
-  longueur: { name: 'Saut en longueur', type: 'solo' },
-  tir: { name: 'Tir de vitesse', type: 'solo' },
-  curling: { name: 'Curling', type: 'duel' },
-  football: { name: 'Football', type: 'duel' },
-  skate: { name: 'Skateboard', type: 'solo' },
-  basket: { name: 'Basketball', type: 'solo' },
-  handball: { name: 'Handball', type: 'duel' },
-  rugby: { name: 'Rugby', type: 'solo' },
-  escrime: { name: 'Escrime', type: 'duel' },
-  golf: { name: 'Mini-golf', type: 'solo' },
-  haltero: { name: 'Haltérophilie', type: 'solo' },
-  arc: { name: "Tir à l'arc", type: 'solo' },
-  ski: { name: 'Ski slalom', type: 'solo' },
-  marteau: { name: 'Lancer du marteau', type: 'solo' },
-  escalade: { name: 'Escalade', type: 'solo' },
-  judo: { name: 'Judo', type: 'duel' },
-  hiphop: { name: 'Hip-Hop', type: 'solo' },
+  // Été
+  sprint: { name: '100 m', type: 'solo', season: 'ete' },
+  haies: { name: '110 m haies', type: 'solo', season: 'ete' },
+  cyclisme: { name: 'Cyclisme sur piste', type: 'solo', season: 'ete' },
+  natation: { name: 'Natation 4 nages', type: 'solo', season: 'ete' },
+  aviron: { name: 'Aviron', type: 'solo', season: 'ete' },
+  hauteur: { name: 'Saut en hauteur', type: 'solo', season: 'ete' },
+  longueur: { name: 'Saut en longueur', type: 'solo', season: 'ete' },
+  tir: { name: 'Tir de vitesse', type: 'solo', season: 'ete' },
+  football: { name: 'Football', type: 'duel', season: 'ete' },
+  skate: { name: 'Skateboard', type: 'solo', season: 'ete' },
+  basket: { name: 'Basketball', type: 'solo', season: 'ete' },
+  handball: { name: 'Handball', type: 'duel', season: 'ete' },
+  rugby: { name: 'Rugby', type: 'solo', season: 'ete' },
+  escrime: { name: 'Escrime', type: 'duel', season: 'ete' },
+  golf: { name: 'Mini-golf', type: 'solo', season: 'ete' },
+  haltero: { name: 'Haltérophilie', type: 'solo', season: 'ete' },
+  arc: { name: "Tir à l'arc", type: 'solo', season: 'ete' },
+  marteau: { name: 'Lancer du marteau', type: 'solo', season: 'ete' },
+  escalade: { name: 'Escalade', type: 'solo', season: 'ete' },
+  judo: { name: 'Judo', type: 'duel', season: 'ete' },
+  hiphop: { name: 'Hip-Hop', type: 'solo', season: 'ete' },
+  // Hiver
+  ski: { name: 'Ski slalom', type: 'solo', season: 'hiver' },
+  curling: { name: 'Curling', type: 'duel', season: 'hiver' },
+  hockey: { name: 'Hockey sur glace', type: 'duel', season: 'hiver' },
+  patinage: { name: 'Patinage de vitesse', type: 'solo', season: 'hiver' },
+  bobsleigh: { name: 'Bobsleigh', type: 'solo', season: 'hiver' },
+  sautski: { name: 'Saut à ski', type: 'solo', season: 'hiver' },
+  snowboard: { name: 'Snowboard halfpipe', type: 'solo', season: 'hiver' },
 };
 const MODES = {
   libre: { name: 'Jeu libre', count: 1 },
   penta: { name: 'Pentathlon', count: 5 },
   hepta: { name: 'Heptathlon', count: 7 },
   deca: { name: 'Décathlon', count: 10 },
-  jo: { name: 'Mode J.O.', count: Infinity },
+  ete: { name: "J.O. d'été", season: 'ete' },
+  hiver: { name: "J.O. d'hiver", season: 'hiver' },
+  totale: { name: 'Jeux Ose’Lympiques · la totale', all: true },
 };
+function pickProgram(mode) {
+  const m = MODES[mode];
+  const keys = Object.keys(EVENTS).filter((k) => m.all || !m.season || EVENTS[k].season === m.season);
+  const list = shuffle(keys);
+  return m.count ? list.slice(0, m.count) : list;
+}
 const POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
 const MAX_PLAYERS = 16;
 
@@ -266,13 +281,10 @@ io.on('connection', (socket) => {
     if (!['lobby', 'final'].includes(room.phase)) return;
     if (!MODES[mode]) return;
     if (room.phase === 'final') for (const p of room.players.values()) { p.total = 0; p.medals = [0, 0, 0]; }
-    const all = Object.keys(EVENTS);
     if (mode === 'libre') {
       if (!EVENTS[event]) return;
       room.program = [event];
-    } else {
-      room.program = shuffle(all).slice(0, Math.min(MODES[mode].count, all.length));
-    }
+    } else room.program = pickProgram(mode);
     room.mode = mode;
     room.index = 0;
     startEvent(room);

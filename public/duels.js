@@ -1,4 +1,4 @@
-// Jeux Zozz’lympiques — duels : football (air-hockey), handball (7 m), escrime
+// Jeux Ose’Lympiques — duels : football (air-hockey), handball (7 m), escrime
 import { sleep, $, countdown, fitCanvas, slime, stands , sfx, buzz} from './kit.js';
 
 // Outils communs aux duels : adversaire, messages, forfait
@@ -185,13 +185,15 @@ export async function escrime(root, ctx) {
 const FOOT = { win: 3, limit: 120, goal: [32, 68], pr: 8, br: 4, zone: 0.5, field: '#7fd6a3', friction: 0.6, minSpeed: 0, serve: 0, maxSpeed: 260, botSpeed: 115, unit: 'buts', help: 'Garde le doigt sur ton slime pour le déplacer. Interdit de passer la ligne du milieu.' };
 const PING = { win: 5, limit: 150, goal: [0, 100], pr: 7, br: 3, zone: 0.66, field: '#4a8fe0', friction: 1, minSpeed: 85, serve: 95, maxSpeed: 300, botSpeed: 150, unit: 'points', help: 'Glisse ta raquette pour renvoyer la balle. Une balle qui passe derrière toi = point pour l\'adversaire.' };
 export const football = (root, ctx) => airGame(root, ctx, FOOT);
+const HOCKEY = { ...FOOT, goal: [36, 64], field: '#e3f4ff', friction: 0.85, maxSpeed: 300, botSpeed: 125, help: 'Garde le doigt sur ton slime pour le déplacer. Le palet glisse beaucoup sur la glace ! Interdit de passer la ligne rouge.' };
+export const hockey = (root, ctx) => airGame(root, ctx, HOCKEY);
 async function airGame(root, ctx, C) {
   const D = duel(ctx);
   const WIN = C.win, LIMIT = C.limit;
   root.innerHTML = `
     <div class="hud"><span class="big" id="sc">0 – 0</span><span>vs ${D.oppName}</span><span id="tm">2:00</span></div>
     <canvas class="full" id="cv"></canvas>
-    <div class="help" id="msg">Garde le doigt sur ton slime pour le déplacer. ${C.help} Premier à ${WIN} ${C.unit}.</div>`;
+    <div class="help" id="msg">${C.help} Premier à ${WIN} ${C.unit}.</div>`;
   const cv = $(root, '#cv'), msg = $(root, '#msg'), scEl = $(root, '#sc'), tm = $(root, '#tm');
   const { g, W, H } = fitCanvas(cv);
   const FW = 100, FH = 160, PR = C.pr, BR = C.br, GOAL = C.goal, ZY = FH * C.zone;
@@ -210,7 +212,7 @@ async function airGame(root, ctx, C) {
     g.clearRect(0, 0, W, H);
     g.fillStyle = C.field; g.fillRect(ox, oy, FW * sc, FH * sc);
     for (let k = 0; k < 8; k++) { g.fillStyle = k % 2 ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.04)'; g.fillRect(ox, oy + k * FH * sc / 8, FW * sc, FH * sc / 8); }
-    g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(ox, oy, FW * sc, FH * sc);
+    g.strokeStyle = C.field === '#e3f4ff' ? '#e8456b' : '#fff'; g.lineWidth = 3; g.strokeRect(ox, oy, FW * sc, FH * sc);
     g.beginPath(); g.moveTo(ox, oy + FH * sc / 2); g.lineTo(ox + FW * sc, oy + FH * sc / 2); g.stroke();
     g.beginPath(); g.arc(ox + FW * sc / 2, oy + FH * sc / 2, 14 * sc, 0, 7); g.stroke();
     const gw = (GOAL[1] - GOAL[0]) * sc, gx0 = ox + GOAL[0] * sc;
@@ -220,8 +222,8 @@ async function airGame(root, ctx, C) {
     slime(g, hx, hy, PR * sc, D.host ? D.myCol : D.oppCol);
     slime(g, gx, gy, PR * sc, D.host ? D.oppCol : D.myCol);
     const [bx, by] = toScreen(st.ball);
-    g.fillStyle = '#fff'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill(); g.stroke();
-    g.fillStyle = '#2a1638'; g.beginPath(); g.arc(bx, by, BR * sc * 0.4, 0, 7); g.fill();
+    g.fillStyle = C.field === '#e3f4ff' ? '#2a1638' : '#fff'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = C.field === '#e3f4ff' ? '#4a2b5e' : '#2a1638'; g.beginPath(); g.arc(bx, by, BR * sc * 0.4, 0, 7); g.fill();
     const mine = D.host ? st.s[0] : st.s[1], theirs = D.host ? st.s[1] : st.s[0];
     scEl.textContent = `${mine} – ${theirs}`;
     const left = Math.max(0, LIMIT - st.t);

@@ -41,7 +41,7 @@ let S = null;            // état de la salle
 let runningGameId = null;
 let gameMsgHandler = null, gameInbox = [];
 let myResult = null;
-let libreEvent = 'sprint', chosenMode = 'jo';
+let libreEvent = 'sprint', chosenMode = 'totale';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const country = (code) => S?.countries.find((c) => c.code === code) || { flag: '🏳️', color: '#ccc', name: '?' };
@@ -77,7 +77,7 @@ function renderHome() {
   if (window.OFFLINE) {
     let nb = 7;
     app.innerHTML = `
-      <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Zozz’lympiques</span></h1>
+      <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
       <p class="sub">Entraînement contre des bots</p>
       <div class="card">
         <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
@@ -99,7 +99,7 @@ function renderHome() {
     return;
   }
   app.innerHTML = `
-    <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Zozz’lympiques</span></h1>
+    <div class="kicker">Édition Taghazout</div><h1 class="logo"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     <div class="card">
       <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
       <button id="create">Créer une partie</button>
@@ -140,7 +140,7 @@ function renderLobby() {
   const link = `${location.origin}${location.pathname}?r=${S.code}`;
   app.innerHTML = `
     <div class="kicker" style="margin-top:6px">Édition Taghazout</div>
-    <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Zozz’lympiques</span></h1>
+    <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     ${window.OFFLINE ? '' : `<div class="codecard"><div><div class="lbl">Code de la partie</div><div class="code">${S.code}</div></div>
       <button class="pillbtn" id="share">Partager</button></div>`}
     <section class="blk"><div class="blkhead"><h2>Athlètes</h2><span>${S.players.length} / 16</span></div>
@@ -150,8 +150,8 @@ function renderLobby() {
       ${S.countries.map((c) => `<button data-c="${c.code}" class="${me?.country === c.code ? 'sel' : ''}" ${!window.OFFLINE && taken.has(c.code) && me?.country !== c.code ? 'disabled' : ''} title="${c.name}" aria-label="${c.name}">${c.flag}</button>`).join('')}
     </div><div class="muted" style="margin-top:6px">${country(me?.country).name}</div></section>
     ${host ? `<section class="blk"><h2>Programme</h2>
-      <div class="tiles">${Object.entries(S.modes).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i} ${chosenMode === k ? 'sel' : ''} ${k === 'jo' ? 'wide' : ''}"><b>${String(k === 'libre' ? 1 : k === 'jo' ? Object.keys(S.events).length : mo.count).padStart(2, '0')}</b><span>${k === 'jo' ? 'Mode J.O. · toutes les épreuves' : mo.name}</span></button>`).join('')}</div>
-      ${chosenMode === 'libre' ? `<div class="chips" style="margin-top:10px">${Object.entries(S.events).map(([k, e]) => `<button data-e="${k}" class="${libreEvent === k ? 'sel' : ''}">${e.name}</button>`).join('')}</div>` : ''}
+      <div class="tiles">${Object.entries(S.modes).map(([k, mo], i) => `<button data-m="${k}" class="tile t${i % 5} ${chosenMode === k ? 'sel' : ''} ${mo.all ? 'wide' : ''}"><b>${String(modeCount(k)).padStart(2, '0')}</b><span>${mo.name}</span></button>`).join('')}</div>
+      ${chosenMode === 'libre' ? [['ete', '☀️ Été'], ['hiver', '❄️ Hiver']].map(([s, t]) => `<div class="seasonlbl">${t}</div><div class="chips">${Object.entries(S.events).filter(([, e]) => e.season === s).map(([k, e]) => `<button data-e="${k}" class="${libreEvent === k ? 'sel' : ''}">${e.name}</button>`).join('')}</div>`).join('') : ''}
       <div class="muted" style="margin:10px 0">${modeHint()}</div>
       <button class="cta" id="start">Lancer les jeux <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></section>`
     : `<div class="card muted">En attente de l'hôte pour lancer…</div>`}
@@ -163,43 +163,55 @@ function renderLobby() {
   if (st) st.onclick = () => socket.emit('start', { mode: chosenMode, event: libreEvent });
   document.getElementById('leave').onclick = () => { socket.emit('leave'); store.del('bg_room'); S = null; history.replaceState(null, '', location.pathname); render(); scene3d.sync(); };
   const sh = document.getElementById('share'); if (sh) sh.onclick = async () => {
-    try { if (navigator.share) await navigator.share({ title: 'Les Jeux Zozz’lympiques', text: `Rejoins les Jeux Zozz’lympiques ! Code ${S.code}`, url: link }); else { await navigator.clipboard.writeText(link); toast('Lien copié !'); } } catch {}
+    try { if (navigator.share) await navigator.share({ title: 'Les Jeux Ose’Lympiques', text: `Rejoins les Jeux Ose’Lympiques ! Code ${S.code}`, url: link }); else { await navigator.clipboard.writeText(link); toast('Lien copié !'); } } catch {}
   };
 }
+function modeCount(k) {
+  const mo = S.modes[k], evs = Object.values(S.events);
+  if (k === 'libre') return 1;
+  if (mo.count) return mo.count;
+  return mo.all ? evs.length : evs.filter((e) => e.season === mo.season).length;
+}
 function modeHint() {
-  const n = Object.keys(S.events).length;
-  const m = S.modes[chosenMode];
+  const mo = S.modes[chosenMode], n = modeCount(chosenMode);
   if (chosenMode === 'libre') return '1 épreuve au choix';
-  if (chosenMode === 'jo') return `Toutes les épreuves (${n}) dans un ordre aléatoire`;
-  return `${m.name} : ${Math.min(m.count, n)} épreuve(s) au hasard${m.count > n ? ` (V1 : ${n} disponibles)` : ''}`;
+  if (mo.season === 'ete') return `Toutes les épreuves d'été (${n}) dans un ordre aléatoire`;
+  if (mo.season === 'hiver') return `Toutes les épreuves d'hiver (${n}) dans un ordre aléatoire`;
+  if (mo.all) return `La totale : les ${n} épreuves, été et hiver, dans un ordre aléatoire`;
+  return `${mo.name} : ${n} épreuves tirées au hasard (été et hiver)`;
 }
 
 /* ---------- Records ---------- */
-// Vrais records du monde quand l'épreuve s'y prête, sinon record Zozz’lympique à battre.
+// Vrais records du monde quand l'épreuve s'y prête, sinon record Ose’Lympique à battre.
 const fs = (v) => v.toFixed(2).replace('.', ',') + ' s', fm = (v) => v.toFixed(2).replace('.', ',') + ' m';
 const RECORDS = {
   sprint: { who: 'Usain Bolt 🇯🇲', value: 9.58, lower: true, fmt: fs, world: true },
   haies: { who: 'Aries Merritt 🇺🇸', value: 12.8, lower: true, fmt: fs, world: true },
   hauteur: { who: 'Javier Sotomayor 🇨🇺', value: 2.45, fmt: fm, world: true },
   longueur: { who: 'Mike Powell 🇺🇸', value: 8.95, fmt: fm, world: true },
-  tir: { who: 'Record Zozz’lympique', value: 8.5, lower: true, fmt: fs },
-  hiphop: { who: 'Record Zozz’lympique', value: 300, fmt: (v) => Math.round(v) + ' pts' },
-  cyclisme: { who: 'Record Zozz’lympique', value: 10, lower: true, fmt: fs },
-  natation: { who: 'Record Zozz’lympique', value: 28, lower: true, fmt: fs },
-  aviron: { who: 'Record Zozz’lympique', value: 15, lower: true, fmt: fs },
-  skate: { who: 'Record Zozz’lympique', value: 620, fmt: (v) => Math.round(v) + ' pts' },
-  golf: { who: 'Record Zozz’lympique', value: 5, lower: true, fmt: (v) => v + ' coups' },
+  tir: { who: 'Record Ose’Lympique', value: 7, lower: true, fmt: fs },
+  hiphop: { who: 'Record Ose’Lympique', value: 330, fmt: (v) => Math.round(v) + ' pts' },
+  cyclisme: { who: 'Record Ose’Lympique', value: 7.5, lower: true, fmt: fs },
+  natation: { who: 'Record Ose’Lympique', value: 14, lower: true, fmt: fs },
+  aviron: { who: 'Record Ose’Lympique', value: 17, lower: true, fmt: fs },
+  skate: { who: 'Record Ose’Lympique', value: 700, fmt: (v) => Math.round(v) + ' pts' },
+  golf: { who: 'Record Ose’Lympique', value: 6, lower: true, fmt: (v) => v + ' coups' },
   haltero: { who: 'Lasha Talakhadze 🇬🇪 (arraché)', value: 225, fmt: (v) => Math.round(v) + ' kg', world: true },
   marteau: { who: 'Iouri Sedykh 🇺🇦', value: 86.74, fmt: fm, world: true },
-  arc: { who: 'Record Zozz’lympique', value: 84, fmt: (v) => Math.round(v) + ' pts' },
-  ski: { who: 'Record Zozz’lympique', value: 19, lower: true, fmt: fs },
-  escalade: { who: 'Record Zozz’lympique', value: 6, lower: true, fmt: fs },
+  arc: { who: 'Record Ose’Lympique', value: 82, fmt: (v) => Math.round(v) + ' pts' },
+  ski: { who: 'Record Ose’Lympique', value: 18.6, lower: true, fmt: fs },
+  escalade: { who: 'Record Ose’Lympique', value: 5.5,
+  patinage: { who: 'Record Ose’Lympique', value: 9, lower: true, fmt: fs },
+  bobsleigh: { who: 'Record Ose’Lympique', value: 14, lower: true, fmt: fs },
+  snowboard: { who: 'Record Ose’Lympique', value: 700, fmt: (v) => Math.round(v) + ' pts' },
+  sautski: { who: 'Stefan Kraft 🇦🇹', value: 253.5, fmt: (v) => v.toFixed(1).replace('.', ',') + ' m', world: true }, lower: true, fmt: fs },
 };
-const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade'];
+const TIMED = ['sprint', 'haies', 'tir', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
 function rawValue(ev, score) {
   if (TIMED.includes(ev) || ev === 'golf') return -score;
   if (ev === 'hauteur') return Math.ceil(score / 100) / 100; // cm -> m
   if (ev === 'longueur' || ev === 'marteau') return score / 100;
+  if (ev === 'sautski') return score / 10;
   if (ev === 'haltero') return Math.ceil(score / 100);
   return score;
 }
@@ -230,13 +242,18 @@ const RULES = {
   handball: { but: 'Duel de jets à 7 m : 5 tirs chacun, en alternance.', ecran: 'En haut : le but et le gardien. En bas : une grille de 9 zones.', gestes: ['Tireur : choisis une zone (✖ = déjà utilisée, interdite).', 'Gardien : choisis où plonger (⚽ = zones où l\'adversaire a déjà tiré, il ne peut plus y viser).', 'Même zone = arrêt, sinon but. 10 s pour choisir.'], score: 'Le plus de buts gagne, mort subite en cas d\'égalité. Victoire = 10 pts, défaite = 8 pts.' },
   rugby: { but: 'Passer un maximum de pénalités sur 5, de plus en plus loin (22 à 45 m).', ecran: 'Les perches en haut (la zone verte entre elles), le ballon en bas.', gestes: ['Pose le doigt sur le ballon.', 'Glisse-le vers les perches et relâche.', 'La direction vise ; plus c\'est loin, plus le geste doit être vif.'], score: 'Au nombre de pénalités réussies.' },
   escrime: { but: 'Duel au fleuret : toucher 3 fois l\'adversaire.', ecran: 'En haut : les deux escrimeurs. En bas : 3 boutons Haut, Milieu, Bas.', gestes: ['L\'attaquant et le défenseur choisissent une zone en même temps (10 s).', 'Même zone = parade : le défenseur devient l\'attaquant.', 'Zones différentes = touche pour l\'attaquant.'], score: 'Premier à 3 touches. Victoire = 10 pts, défaite = 8 pts.' },
-  golf: { but: 'Mini-golf : 3 trous en le moins de coups possible.', ecran: 'Le parcours vu de dessus, avec son nom en haut (tirés au sort parmi 9, les mêmes pour tous).', gestes: ['Pose le doigt n\'importe où et glisse vers l\'arrière : une ligne de visée apparaît.', 'Plus tu tires loin, plus le coup est fort. Relâche pour putter.', 'Les murs roses font rebondir la balle. 7 coups max par trou (+1 de pénalité).'], score: 'Le moins de coups au total.' },
+  golf: { but: 'Mini-golf : 3 trous en le moins de coups possible.', ecran: 'Le parcours vu de dessus, avec son nom en haut (tirés au sort parmi 9, les mêmes pour tous).', gestes: ['Pose le doigt n\'importe où et glisse vers l\'arrière : une ligne de visée apparaît.', 'Plus tu tires loin, plus le coup est fort. Relâche pour putter.', 'Les murs roses font rebondir la balle. 10 coups max par trou (+1 de pénalité).'], score: 'Le moins de coups au total.' },
   hiphop: { but: 'Danser 1 minute en tapant les bonnes touches au bon moment.', ecran: 'En haut : 4 colonnes où descendent des blocs colorés et une ligne blanche. En bas : 4 boutons flèches.', gestes: ['Un bloc descend dans une colonne.', 'Quand il passe sur la ligne blanche, tape le bouton de la même colonne.', 'Ça accélère au fil de la minute.'], score: 'Parfait = 3 pts, Bien = 1 pt. Le plus de points gagne.' },
   haltero: { but: 'Soulever la barre la plus lourde (100 kg, puis +10 kg à chaque réussite).', ecran: 'En haut : ton slime et la barre. En bas : un bandeau de phase, une jauge et le gros bouton.', gestes: ['① Bandeau rose « Soulève » : tape vite pour remplir la jauge en 3 s.', '② Bandeau vert « Équilibre » : la barre penche toute seule. Incline le téléphone (ou glisse le doigt) pour la garder droite 3 s.', 'Au-delà de 25°, elle tombe. 3 échecs de suite = fin.'], score: 'À la barre la plus lourde. Conseil : verrouille la rotation de l\'écran.' },
   arc: { but: 'Marquer le plus de points en 3 volées de 3 flèches.', ecran: 'La cible au centre, ton viseur qui bouge, le vent en haut à gauche.', gestes: ['Garde le doigt posé : tu bandes l\'arc et le viseur se calme.', 'Si tu tiens trop longtemps, il se remet à trembler.', 'Relâche pour tirer. Téléphone immobile = viseur plus stable. Tiens compte du vent.'], score: 'Au total des points (10 au centre).' },
   ski: { but: 'Descendre le slalom de 20 portes le plus vite possible.', ecran: 'La piste vue de dessus, ton skieur en bas, les portes qui arrivent.', gestes: ['Incline le téléphone à gauche ou à droite pour tourner.', 'Sinon, garde le doigt sur la piste et glisse à gauche ou à droite.', 'Passe entre les deux drapeaux de chaque porte.'], score: 'Au temps, +2 s par porte manquée.' },
   marteau: { but: 'Lancer le marteau le plus loin, en 3 essais.', ecran: 'En haut : le terrain et les distances. En bas : une roue avec une zone verte en haut.', gestes: ['Fais des cercles sur la roue, de plus en plus vite (au moins 3 tours).', 'Lève le doigt quand la boule passe dans la zone verte.', 'Ailleurs = dans la cage, essai nul.'], score: 'À la meilleure distance.' },
   escalade: { but: 'Grimper le mur de 15 m le plus vite possible.', ecran: 'En haut : les couloirs des grimpeurs, la prochaine prise de ton couloir en corail. En bas : ta position et les boutons ◀ et ▶.', gestes: ['Regarde de quel côté est la prise allumée.', 'Tape ◀ si elle est à gauche, ▶ si elle est à droite.', 'Mauvais côté = tu glisses d\'une prise et tu es bloqué un instant.'], score: 'Au temps.' },
+  hockey: { but: 'Duel façon air-hockey sur glace : marquer dans la cage adverse.', ecran: 'La patinoire vue de dessus : toi en bas, l\'adversaire en haut, le palet noir.', gestes: ['Garde le doigt sur l\'écran : ton slime suit ton doigt.', 'Frappe le palet en fonçant dessus : il glisse beaucoup plus qu\'un ballon.', 'Tu ne peux pas dépasser la ligne du milieu.'], score: 'Premier à 3 buts (2 min, puis but en or). Victoire = 10 pts, défaite = 8 pts.' },
+  patinage: { but: 'Patiner 500 m le plus vite possible.', ecran: 'En haut : l\'anneau de glace vu de côté. En bas : ta position et deux boutons G et D.', gestes: ['Tape G puis D puis G… en alternant : chaque bonne poussée = 5 m.', 'Deux fois le même pied = tu glisses et tu n\'avances presque pas.', 'Trouve un rythme régulier plutôt que de taper n\'importe comment.'], score: 'Au temps.' },
+  bobsleigh: { but: 'Descendre la piste de 1 200 m le plus vite possible.', ecran: 'En haut : la piste. En bas : un bandeau qui annonce les virages et deux boutons ⬅ ➡.', gestes: ['① Poussée (3 s) : tape vite sur les boutons, ta vitesse de départ en dépend.', '② Descente : un virage s\'annonce et le bon bouton devient vert.', 'Tape-le vite (moins d\'une seconde) : bonne trajectoire = tu accélères. Raté ou trop tard = tu tapes la paroi et tu ralentis.'], score: 'Au temps.' },
+  sautski: { but: 'Sauter le plus loin, en 2 sauts.', ecran: 'En haut : le tremplin et la piste de réception. En bas : un bandeau de phase, une jauge et le gros bouton.', gestes: ['① Appel : la flèche avance une seule fois. Tape SAUTE dans le vert, juste avant le rouge.', '② Vol (3 s) : incline le téléphone (ou glisse le doigt) pour garder les skis à plat.', '③ Réception : attends que le bouton devienne vert et tape TÉLÉMARK. Trop tôt ou trop tard coûte des mètres ; pas de télémark = chute.'], score: 'Au meilleur saut.' },
+  snowboard: { but: 'Réussir 6 figures de plus en plus longues dans le halfpipe.', ecran: 'En haut : le halfpipe enneigé. En bas : la séquence de flèches et 4 boutons flèches.', gestes: ['Regarde : les flèches s\'allument une par une et restent visibles.', 'Elles se cachent : reproduis la séquence avec les boutons, en 10 s.', 'Une erreur = figure ratée, on passe à la suivante.'], score: 'Chaque figure réussie = 100 pts + bonus de rapidité.' },
   judo: { but: 'Duel de réflexes au meilleur des 5 manches.', ecran: 'En haut : les deux judokas. En bas : un bandeau et un gros bouton gris « Attends… ».', gestes: ['Ne touche à rien tant que le bouton est gris.', 'Au signal « HAJIME ! », le bouton devient vert : tape le plus vite possible.', 'Taper avant le signal = faux départ, point perdu.'], score: 'Premier à 3 manches. Victoire = 10 pts, défaite = 8 pts.' },
 };
 let gameStarted = false;
@@ -251,14 +268,14 @@ function renderEvent() {
     <div class="title" style="margin-top:6px">Épreuve ${cur.index + 1}/${cur.count}</div>
     <h1 class="logo" style="margin:10px 0 14px;font-size:44px">${esc(ev.name)}</h1>
     ${rulesHTML(cur.event)}
-    <button class="ghost" id="try" ${triedId === cur.id ? 'hidden' : ''}>🎮 Faire un essai de 30 s (une seule fois, ne compte pas)</button>
+    <button class="ghost" id="try" ${triedId === cur.id ? 'hidden' : ''}>🎮 Essai de 30 s<small>une seule fois · ne compte pas</small></button>
     <div id="rec"></div>
     <div class="card" id="rdy"></div>
     <button id="ready">✔ J'ai compris, prêt !</button>`;
   if (strip) document.getElementById('rec').append(strip);
   scene3d.setEvent(cur.event);
   document.getElementById('try').onclick = () => practice(cur);
-  document.getElementById('ready').onclick = () => { sound.unlock(); sfx('tick'); if (['haltero', 'arc', 'ski'].includes(cur.event)) requestSensors(); socket.emit('ready'); };
+  document.getElementById('ready').onclick = () => { sound.unlock(); sfx('tick'); if (['haltero', 'arc', 'ski', 'sautski'].includes(cur.event)) requestSensors(); socket.emit('ready'); };
   updateRules();
   if (cur.go) startGame();
 }
@@ -276,7 +293,7 @@ let triedId = null;
 function practice(cur) {
   if (triedId === cur.id) return;
   triedId = cur.id; // un seul essai par épreuve
-  if (['haltero', 'arc', 'ski'].includes(cur.event)) requestSensors();
+  if (['haltero', 'arc', 'ski', 'sautski'].includes(cur.event)) requestSensors();
   sound.unlock();
   const ov = document.createElement('div');
   ov.className = 'game practice';
@@ -375,7 +392,7 @@ function updateWait() {
   if (!w) { w = document.createElement('div'); w.id = 'wait'; w.className = 'card wait'; document.body.appendChild(w); }
   const connected = S.players.filter((p) => p.connected);
   const done = connected.filter((p) => S.done.includes(p.id)).length;
-  const nr = myResult.flag === 'wr' ? '<div class="newrec">🔥 Nouveau record ' + (RECORDS[S.current.event]?.world ? 'du monde' : 'Zozz’lympique') + ' !</div>'
+  const nr = myResult.flag === 'wr' ? '<div class="newrec">🔥 Nouveau record ' + (RECORDS[S.current.event]?.world ? 'du monde' : 'Ose’Lympique') + ' !</div>'
     : myResult.flag === 'pb' ? '<div class="newrec">Record perso battu !</div>' : '';
   w.innerHTML = nr + `<b>Terminé : ${esc(myResult.detail || '')}</b><div class="muted">En attente des autres… ${done}/${connected.length}</div>`;
 }
@@ -434,7 +451,7 @@ function renderReveal() {
     if (duel) for (const x of r.ranking) { if (x.rank === 1) groups[0].push({ p: player(x.id), sub: '+10 pts' }); }
     else for (const x of r.ranking) if (x.rank && x.rank <= 3 && player(x.id)) groups[x.rank - 1].push({ p: player(x.id), sub: x.detail || '' });
     const meRow = r.ranking.find((x) => x.id === pid);
-    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade'];
+    const RACE = ['sprint', 'haies', 'cyclisme', 'natation', 'aviron', 'ski', 'escalade', 'patinage', 'bobsleigh'];
     const top = r.ranking.filter((x) => x.score != null).slice(0, 3);
     const pf = RACE.includes(r.event) && top.length >= 2 && Math.abs(top[0].score - top[1].score) <= 0.15;
     app.innerHTML = `

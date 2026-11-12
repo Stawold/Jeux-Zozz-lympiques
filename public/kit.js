@@ -1,4 +1,4 @@
-// Jeux Zozz’lympiques — outils partagés par les épreuves
+// Jeux Ose’Lympiques — outils partagés par les épreuves
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const $ = (root, sel) => root.querySelector(sel);
 

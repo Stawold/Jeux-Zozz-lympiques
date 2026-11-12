@@ -1,4 +1,4 @@
-// Jeux Zozz’lympiques — épreuves solo : saut en longueur, skateboard, basketball, rugby, mini-golf
+// Jeux Ose’Lympiques — épreuves solo : saut en longueur, skateboard, basketball, rugby, mini-golf
 import { sleep, $, countdown, fitCanvas, slime, stands , sfx, buzz} from './kit.js';
 
 const fmtM = (cm) => (cm / 100).toFixed(2).replace('.', ',') + ' m';
@@ -85,8 +85,9 @@ export async function longueur(root, ctx) {
 }
 
 /* ---------------- Skateboard : séquences à reproduire ---------------- */
-export async function skate(root, ctx) {
-  const TRICKS = ['Ollie', 'Kickflip', 'Heelflip', '360 Flip', 'Impossible', 'Darkslide'];
+export const snowboard = (root, ctx) => skate(root, ctx, true);
+export async function skate(root, ctx, snow = false) {
+  const TRICKS = snow ? ['Indy', 'Method', 'McTwist', 'Frontside 720', 'Double Cork', 'Triple Cork 1440'] : ['Ollie', 'Kickflip', 'Heelflip', '360 Flip', 'Impossible', 'Darkslide'];
   const AR = ['⬅️', '⬇️', '⬆️', '➡️'];
   root.innerHTML = `
     <div class="split-top"><canvas id="cv"></canvas></div>
@@ -105,12 +106,13 @@ export async function skate(root, ctx) {
     g.fillStyle = '#fff1f5'; g.fillRect(0, 0, W, H); stands(g, W, 14);
     // half-pipe
     const gy = H * 0.8;
-    g.fillStyle = '#c9d3e3'; g.beginPath(); g.moveTo(0, H * 0.3); g.quadraticCurveTo(0, gy, W * 0.25, gy); g.lineTo(W * 0.75, gy); g.quadraticCurveTo(W, gy, W, H * 0.3); g.lineTo(W, H); g.lineTo(0, H); g.fill();
+    g.fillStyle = snow ? '#f4fbff' : '#c9d3e3'; g.beginPath(); g.moveTo(0, H * 0.3); g.quadraticCurveTo(0, gy, W * 0.25, gy); g.lineTo(W * 0.75, gy); g.quadraticCurveTo(W, gy, W, H * 0.3); g.lineTo(W, H); g.lineTo(0, H); g.fill();
     g.strokeStyle = '#2a1638'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, H * 0.3); g.quadraticCurveTo(0, gy, W * 0.25, gy); g.lineTo(W * 0.75, gy); g.quadraticCurveTo(W, gy, W, H * 0.3); g.stroke();
     let x = W / 2 + Math.sin(t / 900) * W * 0.18, y = gy - 22, rot = 0;
     if (trick) { const k = Math.min(1, (t - trick.t0) / 1100); y -= Math.sin(k * Math.PI) * H * 0.4; rot = trick.ok ? k * Math.PI * 2 : Math.sin(k * 20) * 0.3; if (k >= 1) trick = null; }
     g.save(); g.translate(x, y); g.rotate(rot);
-    g.fillStyle = '#e8456b'; g.fillRect(-20, 14, 40, 5); g.fillStyle = '#2a1638'; g.beginPath(); g.arc(-13, 22, 3, 0, 7); g.arc(13, 22, 3, 0, 7); g.fill();
+    if (snow) { g.fillStyle = '#e8456b'; g.beginPath(); g.ellipse(0, 17, 26, 5, 0, 0, 7); g.fill(); }
+    else { g.fillStyle = '#e8456b'; g.fillRect(-20, 14, 40, 5); g.fillStyle = '#2a1638'; g.beginPath(); g.arc(-13, 22, 3, 0, 7); g.arc(13, 22, 3, 0, 7); g.fill(); }
     g.restore();
     slime(g, x, y, 14, ctx.color(ctx.me));
     requestAnimationFrame(draw);
@@ -260,7 +262,7 @@ export async function golf(root, ctx) {
     { name: 'Le Couloir', s: [12, 150], h: [88, 150], walls: [[24, 30, 7, 130], [48, 0, 7, 130], [72, 30, 7, 130]] },
     { name: 'La Forteresse', s: [50, 150], h: [50, 45], walls: [[25, 25, 50, 6], [25, 25, 6, 45], [69, 25, 6, 45], [25, 64, 18, 6], [57, 64, 18, 6]] },
     { name: 'Le Zigzag', s: [85, 152], h: [15, 15], walls: [[30, 125, 70, 6], [0, 95, 70, 6], [30, 65, 70, 6], [0, 35, 70, 6]] },
-    { name: "L'Entonnoir", s: [50, 152], h: [50, 20], walls: [[0, 90, 44, 6], [56, 90, 44, 6], [44, 70, 4, 26], [52, 70, 4, 26], [30, 40, 40, 5]] },
+    { name: "L'Entonnoir", s: [50, 152], h: [50, 20], walls: [[0, 90, 38, 6], [62, 90, 38, 6], [36, 66, 5, 30], [59, 66, 5, 30], [30, 40, 40, 5]] },
   ];
   let seed = (ctx.current.seed || 1) >>> 0;
   const rand = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -270,7 +272,7 @@ export async function golf(root, ctx) {
   root.innerHTML = `
     <div class="hud"><span class="big" id="s">0 coup</span><span id="t">Trou 1/3</span></div>
     <canvas class="full" id="cv" style="background:#9fe3cf"></canvas>
-    <div class="help" id="msg">Glisse vers l'arrière pour viser et doser, puis relâche. 7 coups max par trou.</div>`;
+    <div class="help" id="msg">Glisse vers l'arrière pour viser et doser, puis relâche. 10 coups max par trou.</div>`;
   const cv = $(root, '#cv'), msg = $(root, '#msg'), sEl = $(root, '#s'), tEl = $(root, '#t');
   const { g, W, H } = fitCanvas(cv);
   const sc = Math.min(W / 104, H / 164), ox = (W - 100 * sc) / 2, oy = (H - 160 * sc) / 2;
@@ -338,7 +340,7 @@ export async function golf(root, ctx) {
     tEl.textContent = `Trou ${hole + 1}/3 · ${HOLES[hole].name}`;
     draw();
     if (hole === 0) await countdown(root);
-    while (!ball.in && strokes < 7) {
+    while (!ball.in && strokes < 10) {
       msg.textContent = `Coup ${strokes + 1} — glisse vers l'arrière puis relâche`;
       const v = await new Promise((res) => {
         const down = (e) => { const [x, y] = pt(e); aim = { sx: x, sy: y, cx: x, cy: y }; cv.setPointerCapture(e.pointerId); draw(); };
@@ -351,7 +353,7 @@ export async function golf(root, ctx) {
       ball.vx = v.vx; ball.vy = v.vy;
       await roll();
     }
-    if (!ball.in) { total++; sEl.textContent = total + ' coups'; msg.textContent = '⛳ 7 coups atteints : +1 de pénalité'; }
+    if (!ball.in) { total++; sEl.textContent = total + ' coups'; msg.textContent = '⛳ 10 coups atteints : +1 de pénalité'; }
     else { sfx('ok'); } if (ball.in) msg.textContent = strokes === 1 ? '🎉 TROU EN UN !' : `⛳ Dans le trou en ${strokes} coups`;
     await sleep(1400);
   }

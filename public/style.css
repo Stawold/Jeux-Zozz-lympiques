@@ -231,3 +231,10 @@ h1.logo.small .l2 { font-size: clamp(22px, 6.4vw, 36px); }
 .trybar .pillbtn { min-height: 36px; padding: 6px 12px; font-size: 13px; background: var(--plum); color: var(--paper); }
 .tryend { position: absolute; left: 14px; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 8; display: flex; flex-direction: column; gap: 8px; }
 .tryend p { margin: 0; font-weight: 600; }
+
+/* Bouton d'essai sur deux lignes, sans débordement */
+#try { white-space: normal; line-height: 1.2; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-block: 10px; }
+#try small { font: 600 12px var(--body); opacity: .75; }
+#try[hidden] { display: none !important; }
+button { white-space: normal; overflow-wrap: anywhere; }
+.seasonlbl { font: 800 12px var(--display); text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px; }
