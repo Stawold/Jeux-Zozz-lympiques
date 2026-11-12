@@ -2574,7 +2574,7 @@ function renderEvent() {
     <div class="title" style="margin-top:6px">Épreuve ${cur.index + 1}/${cur.count}</div>
     <h1 class="logo" style="margin:10px 0 14px;font-size:44px">${esc(ev.name)}</h1>
     ${rulesHTML(cur.event)}
-    <button class="ghost" id="try">🎮 Faire un essai (ne compte pas)</button>
+    <button class="ghost" id="try" ${triedId === cur.id ? 'hidden' : ''}>🎮 Faire un essai de 30 s (une seule fois, ne compte pas)</button>
     <div id="rec"></div>
     <div class="card" id="rdy"></div>
     <button id="ready">✔ J'ai compris, prêt !</button>`;
@@ -2595,12 +2595,15 @@ function rulesHTML(ev) {
   </div>`;
 }
 // Essai libre : la vraie épreuve, seul (avec 2 fantômes pour les courses), sans envoyer de résultat
+let triedId = null;
 function practice(cur) {
+  if (triedId === cur.id) return;
+  triedId = cur.id; // un seul essai par épreuve
   if (['haltero', 'arc', 'ski'].includes(cur.event)) requestSensors();
   sound.unlock();
   const ov = document.createElement('div');
   ov.className = 'game practice';
-  ov.innerHTML = `<div class="trybar"><span>🎮 ESSAI · ne compte pas</span><button class="pillbtn" id="tryq">Quitter l'essai</button></div>`;
+  ov.innerHTML = `<div class="trybar"><span>🎮 ESSAI · <b id="trys">30</b> s</span><button class="pillbtn" id="tryq">Quitter l'essai</button></div>`;
   const box = document.createElement('div');
   box.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;min-height:0';
   ov.append(box); app.append(ov);
@@ -2609,7 +2612,9 @@ function practice(cur) {
   const ghosts = [{ id: 'g1', name: 'Fantôme A', flag: '👻', color: '#c9b8ff', t: 11 }, { id: 'g2', name: 'Fantôme B', flag: '👻', color: '#9ee6cf', t: 15 }];
   const t0 = performance.now() + 2600;
   const gi = setInterval(() => { if (!ov.isConnected) return clearInterval(gi); for (const g of ghosts) progs[g.id] = Math.max(0, Math.min(1, (performance.now() - t0) / 1000 / g.t)); }, 100);
-  const close = () => { clearInterval(gi); ov.remove(); gameMsgHandler = null; };
+  const tEnd = performance.now() + 30000;
+  const ti = setInterval(() => { const l = Math.ceil((tEnd - performance.now()) / 1000); const e = ov.querySelector('#trys'); if (e) e.textContent = Math.max(0, l); if (l <= 0) close(); }, 250);
+  const close = () => { clearInterval(gi); clearInterval(ti); ov.remove(); gameMsgHandler = null; const t = document.getElementById('try'); if (t) t.hidden = true; };
   ov.querySelector('#tryq').onclick = close;
   gameMsgHandler = null; gameInbox = [];
   const ctx = {
