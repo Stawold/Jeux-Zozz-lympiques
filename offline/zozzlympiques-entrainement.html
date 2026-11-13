@@ -288,7 +288,9 @@ html[data-theme="dark"] body::before { background: #4a2b5e; }
 html[data-theme="dark"] body::after { background: #ffe08a; opacity: .85; box-shadow: 0 0 40px 10px rgba(255,224,138,.35); }
 /* textes clairs posés sur des aplats colorés (avant : var(--paper), devenu sombre la nuit) */
 html[data-theme="dark"] :is(button, .tapzone, .phase, .cd, .pl.me, .mini div.me, .customhead, .move, .podium .name) { color: var(--night-ink); }
-html[data-theme="dark"] :is(.jump, button.picked, .tile:not(.sel), .tapzone.locked, .record, .md) { color: var(--plum); }
+html[data-theme="dark"] :is(.jump, button.picked, .tile:not(.sel), .tapzone.locked, .record, .md, .podium .block) { color: var(--plum) !important; }
+html[data-theme="dark"] .chips button.sel { background: var(--coral) !important; color: #fff !important; box-shadow: 0 0 0 2px #fff1f5; }
+html[data-theme="dark"] .chips button:disabled { opacity: .3; }
 /* surfaces blanches → surfaces nuit */
 html[data-theme="dark"] :is(.card, button.ghost, .pl, .flags button, .chips button, .tile.t4, .help, .gauge, .mini div, .curl-start, .runbar, .wheel, .segbar span, .seq span, .grid9 button, .range, .ringzone, .custom) { background: var(--surface); color: var(--night-ink); }
 /* aplats prune → prune éclairci pour se détacher du fond */
@@ -2128,7 +2130,7 @@ const FOOT = { win: 3, limit: 120, goal: [32, 68], pr: 8, br: 4, zone: 0.5, fiel
 const PING = { win: 5, limit: 150, goal: [0, 100], pr: 7, br: 3, zone: 0.66, field: '#4a8fe0', friction: 1, minSpeed: 85, serve: 95, maxSpeed: 300, botSpeed: 150, unit: 'points', help: 'Glisse ta raquette pour renvoyer la balle. Une balle qui passe derrière toi = point pour l\'adversaire.' };
 const football = (root, ctx) => airGame(root, ctx, FOOT);
 const HOCKEY = { ...FOOT, goal: [36, 64], field: '#e3f4ff', friction: 0.85, maxSpeed: 320, botSpeed: 125, relative: true, stick: true, help: 'Pose le doigt où tu veux : ton joueur suit ton glissé. Frappe le palet avec ta crosse ! Interdit de passer la ligne rouge.' };
-const hockey = (root, ctx) => airGame(root, ctx, HOCKEY);
+const hockey = (root, ctx) => hockeyGame(root, ctx);
 async function airGame(root, ctx, C) {
   const D = duel(ctx);
   const WIN = C.win, LIMIT = C.limit;
@@ -2287,6 +2289,197 @@ async function airGame(root, ctx, C) {
     }
     sendAcc += dt;
     if (!D.isBot && sendAcc > 0.045) { sendAcc = 0; ctx.send({ type: 'fb', st: { ball: st.ball, hp: st.hp, s: st.s, t: st.t } }); }
+    draw();
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ---------------- Hockey sur glace : on ne joue que la crosse, cages avancées comme au vrai hockey ---------------- */
+async function hockeyGame(root, ctx) {
+  const D = duel(ctx);
+  const WIN = 3, LIMIT = 120;
+  root.innerHTML = `
+    <div class="hud"><span class="big" id="sc">0 – 0</span><span>vs ${D.oppName}</span><span id="tm">2:00</span></div>
+    <canvas class="full" id="cv"></canvas>
+    <div class="help" id="msg">Pose le doigt où tu veux et glisse : ta crosse suit. Frappe le palet avec la lame. Premier à ${WIN} buts.</div>`;
+  const cv = $(root, '#cv'), msg = $(root, '#msg'), scEl = $(root, '#sc'), tm = $(root, '#tm');
+  const { g, W, H } = fitCanvas(cv);
+  const FW = 100, FH = 160, BR = 3, CR = 16, GX0 = 41, GX1 = 59, GM = 24, GB = 17, BL = 6; // GM : ligne de but, GB : fond de cage, BL : demi-lame
+  const sc = Math.min(W / FW, H / FH), ox = (W - FW * sc) / 2, oy = (H - FH * sc) / 2;
+  const flip = (p) => ({ x: FW - p.x, y: FH - p.y });
+  const toS = (p) => { const q = D.host ? p : flip(p); return [ox + q.x * sc, oy + q.y * sc]; };
+  const st = { ball: { x: 50, y: 80, vx: 0, vy: 0 }, hp: { x: 50, y: 128, vx: 0, vy: 0 }, gp: { x: 50, y: 32, vx: 0, vy: 0 }, s: [0, 0], t: 0, pause: 1, info: '' };
+  let myLocal = { x: 50, y: 128 }, ended = false, lastGp = null, anchor = null;
+  const clampMine = (p) => ({ x: Math.max(4, Math.min(FW - 4, p.x)), y: Math.max(FH / 2 + 4, Math.min(FH - 5, p.y)) });
+  cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); anchor = { fx: e.clientX, fy: e.clientY, x: myLocal.x, y: myLocal.y }; });
+  cv.addEventListener('pointermove', (e) => {
+    if (!anchor) return;
+    const want = { x: anchor.x + (e.clientX - anchor.fx) / sc * 1.3, y: anchor.y + (e.clientY - anchor.fy) / sc * 1.3 };
+    myLocal = clampMine(want);
+    if (myLocal.x !== want.x || myLocal.y !== want.y) anchor = { fx: e.clientX, fy: e.clientY, x: myLocal.x, y: myLocal.y };
+  });
+  const rel = () => (anchor = null); cv.addEventListener('pointerup', rel); cv.addEventListener('pointercancel', rel);
+
+  // côté de la palette (crochet de la lame) : suit le dernier déplacement horizontal
+  const side = { hp: 1, gp: -1 }, prevX = { hp: 50, gp: 50 };
+  function updSide(k, P) { const dx = P.x - prevX[k]; if (Math.abs(dx) > 0.3) side[k] = Math.sign(dx); prevX[k] = P.x; }
+  function drawStick(k, P, col) {
+    const up = k === 'hp' ? 1 : -1; // le manche part vers son propre camp
+    const [bx, by] = toS(P), [hx, hy] = toS({ x: P.x - side[k] * 10, y: P.y + up * 26 });
+    const [l0x, l0y] = toS({ x: P.x - side[k] * BL, y: P.y }), [l1x, l1y] = toS({ x: P.x + side[k] * BL, y: P.y - up * 1.2 });
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(42,22,56,.18)'; g.lineWidth = 7; g.beginPath(); g.moveTo(hx + 3, hy + 3); g.lineTo(l0x + 3, l0y + 3); g.stroke();
+    g.strokeStyle = '#c98b4b'; g.lineWidth = 5; g.beginPath(); g.moveTo(hx, hy); g.lineTo(l0x, l0y); g.stroke();
+    g.strokeStyle = col; g.lineWidth = 5; const [mx, my] = toS({ x: P.x - side[k] * 8, y: P.y + up * 21 }); g.beginPath(); g.moveTo(hx, hy); g.lineTo(mx, my); g.stroke();
+    g.strokeStyle = '#2a1638'; g.lineWidth = 7; g.beginPath(); g.moveTo(l0x, l0y); g.lineTo(l1x, l1y); g.stroke();
+    g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); g.moveTo((l0x + l1x) / 2, (l0y + l1y) / 2); g.lineTo(l1x, l1y); g.stroke();
+  }
+  function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function drawGoal(top) {
+    const m = top ? GM : FH - GM, b = top ? GB : FH - GB;
+    const [ax, ay] = toS({ x: GX0, y: m }), [bx2, by2] = toS({ x: GX1, y: b });
+    // zone de but bleue devant la cage
+    const [cx, cy] = toS({ x: 50, y: m }); const down = (D.host ? !top : top) ? -1 : 1;
+    g.fillStyle = 'rgba(111,141,255,.25)'; g.beginPath(); g.arc(cx, cy, 11 * sc, down > 0 ? 0 : Math.PI, down > 0 ? Math.PI : 2 * Math.PI); g.fill();
+    // filet + cadre
+    const x0 = Math.min(ax, bx2), y0 = Math.min(ay, by2), w = Math.abs(bx2 - ax), h = Math.abs(by2 - ay);
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(x0, y0, w, h);
+    g.strokeStyle = 'rgba(42,22,56,.25)'; g.lineWidth = 1; for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(x0 + w * i / 6, y0); g.lineTo(x0 + w * i / 6, y0 + h); g.stroke(); }
+    g.strokeStyle = '#e8456b'; g.lineWidth = 4; g.beginPath();
+    const [p1x, p1y] = toS({ x: GX0, y: m }), [p2x, p2y] = toS({ x: GX0, y: b }), [p3x, p3y] = toS({ x: GX1, y: b }), [p4x, p4y] = toS({ x: GX1, y: m });
+    g.moveTo(p1x, p1y); g.lineTo(p2x, p2y); g.lineTo(p3x, p3y); g.lineTo(p4x, p4y); g.stroke();
+    g.strokeStyle = 'rgba(232,69,107,.6)'; g.lineWidth = 2; const [lx0, ly] = toS({ x: 0, y: m }), [lx1] = toS({ x: FW, y: m }); g.beginPath(); g.moveTo(Math.min(lx0, lx1) + 8, ly); g.lineTo(Math.max(lx0, lx1) - 8, ly); g.stroke();
+  }
+  function draw() {
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#eef8ff'; rr(ox, oy, FW * sc, FH * sc, CR * sc); g.fill();
+    g.strokeStyle = '#2a1638'; g.lineWidth = 3; rr(ox, oy, FW * sc, FH * sc, CR * sc); g.stroke();
+    g.save(); rr(ox, oy, FW * sc, FH * sc, CR * sc); g.clip();
+    g.strokeStyle = '#e8456b'; g.lineWidth = 4; g.beginPath(); g.moveTo(ox, oy + FH * sc / 2); g.lineTo(ox + FW * sc, oy + FH * sc / 2); g.stroke();
+    g.strokeStyle = '#6f8dff'; g.lineWidth = 4; for (const y of [FH * 0.33, FH * 0.67]) { g.beginPath(); g.moveTo(ox, oy + y * sc); g.lineTo(ox + FW * sc, oy + y * sc); g.stroke(); }
+    g.strokeStyle = '#6f8dff'; g.lineWidth = 2; g.beginPath(); g.arc(ox + FW * sc / 2, oy + FH * sc / 2, 12 * sc, 0, 7); g.stroke();
+    drawGoal(true); drawGoal(false);
+    g.restore();
+    updSide('hp', st.hp); updSide('gp', st.gp);
+    const [bx, by] = toS(st.ball);
+    g.fillStyle = 'rgba(42,22,56,.2)'; g.beginPath(); g.ellipse(bx + 2, by + 2, BR * sc, BR * sc * 0.8, 0, 0, 7); g.fill();
+    g.fillStyle = '#1a1024'; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill();
+    drawStick('hp', st.hp, D.host ? D.myCol : D.oppCol); drawStick('gp', st.gp, D.host ? D.oppCol : D.myCol);
+    const mine = D.host ? st.s[0] : st.s[1], theirs = D.host ? st.s[1] : st.s[0];
+    scEl.textContent = `${mine} – ${theirs}`;
+    const left = Math.max(0, LIMIT - st.t);
+    tm.textContent = left > 0 ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'BUT EN OR';
+    if (st.info) { g.fillStyle = '#2a1638'; g.font = '900 22px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText(st.info, W / 2, H / 2 - 18); }
+  }
+  function finish(winnerHost, forfeit) {
+    if (ended) return; ended = true;
+    const win = forfeit || (D.host ? winnerHost : !winnerHost);
+    const mine = D.host ? st.s[0] : st.s[1], theirs = D.host ? st.s[1] : st.s[0];
+    msg.textContent = forfeit ? '🏆 Victoire par forfait' : win ? '🏆 Victoire !' : '😢 Défaite';
+    ctx.finish(win ? 1 : 0, forfeit ? 'forfait' : `${mine}-${theirs}`);
+  }
+  D.onForfeit = () => finish(true, true);
+
+  if (!D.host) {
+    D.handlers.push((d) => {
+      if (d.type === 'hk') { Object.assign(st, d.st); return true; }
+      if (d.type === 'hkend') { st.s = d.s; finish(d.w === 'host', false); return true; }
+      return false;
+    });
+    await countdown(root);
+    const send = setInterval(() => { if (ended || !root.isConnected) return clearInterval(send); ctx.send({ type: 'pad', p: flip(myLocal) }); }, 40);
+    (function loop() { if (!root.isConnected) return; st.gp = { ...st.gp, ...flip(myLocal) }; draw(); if (!ended) requestAnimationFrame(loop); })();
+    return;
+  }
+
+  // ---- Hôte : physique ----
+  D.handlers.push((d) => { if (d.type === 'pad') { lastGp = d.p; return true; } return false; });
+  draw();
+  await countdown(root);
+  function moveStick(P, target, dt, maxV) {
+    let dx = target.x - P.x, dy = target.y - P.y; const d = Math.hypot(dx, dy), m = maxV * dt;
+    if (d > m && d > 0) { dx *= m / d; dy *= m / d; }
+    P.vx = dx / dt; P.vy = dy / dt; P.x += dx; P.y += dy;
+  }
+  // collision palet / segment [a,b] de rayon r ; vel = vitesse du segment
+  function segHit(a, b, r, vel, e) {
+    const B = st.ball, abx = b.x - a.x, aby = b.y - a.y, L2 = abx * abx + aby * aby || 1;
+    const k = Math.max(0, Math.min(1, ((B.x - a.x) * abx + (B.y - a.y) * aby) / L2));
+    const cx = a.x + abx * k, cy = a.y + aby * k, dx = B.x - cx, dy = B.y - cy, d = Math.hypot(dx, dy);
+    if (d >= r + BR || d === 0) return false;
+    const nx = dx / d, ny = dy / d; B.x = cx + nx * (r + BR); B.y = cy + ny * (r + BR);
+    const rv = (B.vx - vel.x) * nx + (B.vy - vel.y) * ny;
+    if (rv < 0) { B.vx -= (1 + e) * rv * nx; B.vy -= (1 + e) * rv * ny; }
+    return true;
+  }
+  function stickHit(P, k) {
+    const up = k === 'hp' ? 1 : -1;
+    const a = { x: P.x - side[k] * BL, y: P.y }, b = { x: P.x + side[k] * BL, y: P.y - up * 1.2 };
+    if (segHit(a, b, 1.6, { x: P.vx * 1.35, y: P.vy * 1.35 }, 0.9)) { sfx('tick'); const B = st.ball, s = Math.hypot(B.vx, B.vy); if (s > 330) { B.vx *= 330 / s; B.vy *= 330 / s; } }
+    segHit({ x: P.x - side[k] * BL, y: P.y }, { x: P.x - side[k] * 10, y: P.y + up * 26 }, 1.2, { x: P.vx, y: P.vy }, 0.5); // manche
+  }
+  function walls() {
+    const B = st.ball;
+    // coins arrondis
+    for (const [cx, cy] of [[CR, CR], [FW - CR, CR], [CR, FH - CR], [FW - CR, FH - CR]]) {
+      const inX = cx === CR ? B.x < CR : B.x > FW - CR, inY = cy === CR ? B.y < CR : B.y > FH - CR;
+      if (!inX || !inY) continue;
+      const dx = B.x - cx, dy = B.y - cy, d = Math.hypot(dx, dy), m = CR - BR;
+      if (d > m) { const nx = dx / d, ny = dy / d; B.x = cx + nx * m; B.y = cy + ny * m; const vn = B.vx * nx + B.vy * ny; if (vn > 0) { B.vx -= 1.8 * vn * nx; B.vy -= 1.8 * vn * ny; } }
+    }
+    if (B.x < BR) { B.x = BR; B.vx = Math.abs(B.vx) * 0.85; } if (B.x > FW - BR) { B.x = FW - BR; B.vx = -Math.abs(B.vx) * 0.85; }
+    if (B.y < BR) { B.y = BR; B.vy = Math.abs(B.vy) * 0.85; } if (B.y > FH - BR) { B.y = FH - BR; B.vy = -Math.abs(B.vy) * 0.85; }
+    // cages : côtés et fond pleins, seule l'ouverture compte
+    for (const [m, b] of [[GM, GB], [FH - GM, FH - GB]]) {
+      const zero = { x: 0, y: 0 };
+      segHit({ x: GX0, y: m }, { x: GX0, y: b }, 0.8, zero, 0.6);
+      segHit({ x: GX1, y: m }, { x: GX1, y: b }, 0.8, zero, 0.6);
+      segHit({ x: GX0, y: b }, { x: GX1, y: b }, 0.8, zero, 0.3);
+    }
+  }
+  function faceoff(info, towardHost) {
+    st.ball = { x: 50, y: FH / 2 + (towardHost === undefined ? 0 : towardHost ? 6 : -6), vx: 0, vy: 0 };
+    st.pause = 1.2; st.info = info; slow = 0; sfx('whistle');
+  }
+  let last = performance.now(), sendAcc = 0, slow = 0;
+  st.pause = 0.6;
+  function step(t) {
+    if (!root.isConnected || ended) return;
+    const dt = Math.max(0.001, Math.min(0.033, (t - last) / 1000)); last = t;
+    st.t += dt;
+    moveStick(st.hp, myLocal, dt, 700);
+    if (D.isBot) {
+      const B = st.ball;
+      const target = B.y < FH / 2 + 6 ? { x: B.x - side.gp * 2, y: Math.max(4, B.y - 4) } : { x: Math.max(36, Math.min(64, B.x)), y: GM + 8 };
+      moveStick(st.gp, { x: target.x, y: Math.min(FH / 2 - 4, target.y) }, dt, 115);
+    } else if (lastGp) moveStick(st.gp, { x: lastGp.x, y: Math.min(FH / 2 - 4, Math.max(5, lastGp.y)) }, dt, 900);
+    if (st.pause > 0) { st.pause -= dt; if (st.pause <= 0) st.info = ''; }
+    else {
+      const B = st.ball;
+      for (let i = 0; i < 4; i++) {
+        const px = B.x, py = B.y;
+        B.x += B.vx * dt / 4; B.y += B.vy * dt / 4;
+        walls(); stickHit(st.hp, 'hp'); stickHit(st.gp, 'gp');
+        // but : le palet entre dans la cage par l'ouverture
+        if (B.x > GX0 && B.x < GX1) {
+          if (py >= GM && B.y < GM && B.vy < 0) { st.s[0]++; sfx(D.host ? 'ok' : 'fail'); buzz(80); faceoff('BUT !', false); break; }
+          if (py <= FH - GM && B.y > FH - GM && B.vy > 0) { st.s[1]++; sfx(D.host ? 'fail' : 'ok'); buzz(80); faceoff('BUT !', true); break; }
+        }
+      }
+      B.vx *= Math.pow(0.8, dt); B.vy *= Math.pow(0.8, dt);
+      // palet coincé ou immobile trop longtemps : engagement au centre
+      if (Math.hypot(B.vx, B.vy) < 6) slow += dt; else slow = 0;
+      if (slow > 2.5) faceoff('Engagement');
+      const [h, gs] = st.s;
+      if (h >= WIN || gs >= WIN || (st.t >= LIMIT && h !== gs)) {
+        const w = h > gs ? 'host' : 'guest';
+        if (!D.isBot) ctx.send({ type: 'hkend', w, s: st.s });
+        draw(); finish(w === 'host', false); return;
+      }
+    }
+    sendAcc += dt;
+    if (!D.isBot && sendAcc > 0.045) { sendAcc = 0; ctx.send({ type: 'hk', st: { ball: st.ball, hp: st.hp, s: st.s, t: st.t, info: st.info } }); }
     draw();
     requestAnimationFrame(step);
   }
@@ -2874,8 +3067,9 @@ async function artistique(root, ctx) {
       rz.addEventListener('pointerdown', h);
     });
     jumpT = performance.now() + 600;
-    if (d < 0.06) { add(10, `Parfait ! ${el.n} +10`); sfx('ok'); buzz(30); }
-    else if (d < 0.16) { add(6, `Bien ! ${el.n} +6`); sfx('tick'); }
+    if (d < 0.035) { add(10, `Parfait ! ${el.n} +10`); sfx('ok'); buzz(30); }
+    else if (d < 0.08) { add(6, `Bien ! ${el.n} +6`); sfx('tick'); }
+    else if (d < 0.14) { add(3, `Réception fragile sur le ${el.n} +3`); sfx('tick'); }
     else { add(0, `Chute sur le ${el.n}…`); sfx('fail'); buzz(150); }
   }
   // 2. Pirouette : faire tourner le doigt sur le rond pendant 3 s
@@ -2891,38 +3085,50 @@ async function artistique(root, ctx) {
     await sleep(3000);
     rz.removeEventListener('pointerdown', down); rz.removeEventListener('pointermove', move); rz.removeEventListener('pointerup', up);
     spin = 0;
-    const p = Math.min(10, Math.round(turns * (lvl ? 1 : 1.2)));
+    const need = lvl ? 15 : 13; // tours pour 10 pts
+    const p = Math.max(0, Math.min(10, Math.floor((turns - 3) / (need - 3) * 10)));
     add(p, `${el.n} : ${turns.toFixed(1).replace('.', ',')} tours · +${p}`); sfx(p >= 7 ? 'ok' : 'tick');
   }
   // 3. Séquence de pas : reproduire 5 glissés de direction affichés, vite
   async function pas(el, lvl) {
     const DIRS = ['⬆', '➡', '⬇', '⬅'], n = 5, seq = Array.from({ length: n }, () => Math.floor(Math.random() * 4));
-    let i = 0, errors = 0;
-    const lim = lvl ? 4500 : 5500;
-    phase('run', `👣 ${el.n}`, `Glisse dans le sens des flèches, dans l'ordre (${lim / 1000} s)`); rl.textContent = '';
+    let i = 0, errors = 0, flash = null;
+    const lim = lvl ? 5000 : 6000;
+    phase('run', `👣 ${el.n}`, `Glisse dans le sens de la flèche entourée, une à une (${lim / 1000} s)`); rl.textContent = '';
     const paint = () => {
-      rg.clearRect(0, 0, rw, rh); rg.font = '900 30px Unbounded, sans-serif'; rg.textAlign = 'center'; rg.textBaseline = 'middle';
-      seq.forEach((d, k) => { rg.fillStyle = k < i ? W_MINT : k === i ? W_CORAL : 'rgba(42,22,56,.35)'; rg.fillText(DIRS[d], rw / 2 + (k - (n - 1) / 2) * Math.min(56, rw / 6), rh / 2); });
+      rg.clearRect(0, 0, rw, rh); rg.textAlign = 'center'; rg.textBaseline = 'middle';
+      const gap = Math.min(60, rw / 5.6);
+      seq.forEach((d, k) => {
+        const x = rw / 2 + (k - (n - 1) / 2) * gap, y = rh * 0.42;
+        if (k < i) { rg.fillStyle = W_MINT; rg.beginPath(); rg.arc(x, y, gap * 0.42, 0, 7); rg.fill(); }
+        if (k === i) { rg.strokeStyle = flash === 'ko' ? W_CORAL : W_PLUM; rg.lineWidth = 4; rg.beginPath(); rg.arc(x, y, gap * 0.42, 0, 7); rg.stroke(); }
+        rg.font = '900 28px Unbounded, sans-serif';
+        rg.fillStyle = k < i ? W_PLUM : k === i ? (flash === 'ko' ? W_CORAL : W_PLUM) : 'rgba(42,22,56,.3)';
+        rg.fillText(DIRS[d], x, y + 1);
+        if (k < i) { rg.font = '900 14px Unbounded, sans-serif'; rg.fillStyle = '#1f9e6e'; rg.fillText('✓', x, y + gap * 0.62); }
+      });
+      if (flash) { rg.font = '900 22px Unbounded, sans-serif'; rg.fillStyle = flash === 'ok' ? '#1f9e6e' : W_CORAL; rg.fillText(flash === 'ok' ? '✓ Validé !' : '✗ Mauvais sens', rw / 2, rh * 0.78); }
     };
     paint();
     const t0 = performance.now();
     await new Promise((resolve) => {
-      let st = null, fin = false;
+      let st = null, fin = false, ft = 0;
       const down = (e) => { st = pt(e); rz.setPointerCapture(e.pointerId); };
       const up = (e) => {
         if (!st || fin) return; const p = pt(e), dx = p.x - st.x, dy = p.y - st.y; st = null;
         if (Math.hypot(dx, dy) < 25) return;
         const d = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
-        if (d === seq[i]) { i++; sfx('tick'); } else { errors++; sfx('fail'); buzz(60); }
-        paint(); if (i >= n) end();
+        if (d === seq[i]) { i++; flash = 'ok'; sfx('tick'); buzz(20); } else { errors++; flash = 'ko'; sfx('fail'); buzz(80); }
+        clearTimeout(ft); ft = setTimeout(() => { flash = null; if (!fin) paint(); }, 500);
+        paint(); if (i >= n) setTimeout(end, 350);
       };
       const end = () => { if (fin) return; fin = true; clearTimeout(to); rz.removeEventListener('pointerdown', down); rz.removeEventListener('pointerup', up); resolve(); };
       const to = setTimeout(end, lim);
       rz.addEventListener('pointerdown', down); rz.addEventListener('pointerup', up);
     });
     const time = (performance.now() - t0) / 1000;
-    const p = i < n ? i : Math.max(2, 10 - errors * 2 - (time > lim / 2000 ? 1 : 0));
-    add(p, i < n ? `${el.n} incomplète (${i}/${n}) · +${p}` : `${el.n} en ${time.toFixed(1).replace('.', ',')} s · +${p}`);
+    const p = i < n ? Math.max(0, i - errors) : Math.max(2, 10 - errors * 2 - (time > lim / 2000 ? 1 : 0));
+    add(p, i < n ? `${el.n} incomplète (${i}/${n}) · +${p}` : `✓ ${el.n} validée en ${time.toFixed(1).replace('.', ',')} s · +${p}`);
     if (p >= 8) sfx('ok');
   }
   // 4. Spirale : garder le doigt sur l'étoile qui glisse sur la glace (4 s)
@@ -3457,10 +3663,10 @@ const RULES = {
   ski: { but: 'Descendre le slalom de 20 portes le plus vite possible.', ecran: 'La piste vue de dessus, ton skieur en bas, les portes qui arrivent.', gestes: ['Incline le téléphone à gauche ou à droite pour tourner.', 'Sinon, garde le doigt sur la piste et glisse à gauche ou à droite.', 'Passe entre les deux drapeaux de chaque porte.'], score: 'Au temps, +2 s par porte manquée.' },
   marteau: { but: 'Lancer le marteau le plus loin, en 3 essais.', ecran: 'En haut : le terrain et les distances. En bas : une roue avec une zone verte en haut.', gestes: ['Fais des cercles sur la roue, de plus en plus vite (au moins 3 tours).', 'Lève le doigt quand la boule passe dans la zone verte.', 'Ailleurs = dans la cage, essai nul.'], score: 'À la meilleure distance.' },
   escalade: { but: 'Grimper le mur de 15 m le plus vite possible.', ecran: 'En haut : les couloirs des grimpeurs, la prochaine prise de ton couloir en corail. En bas : ta position et les boutons ◀ et ▶.', gestes: ['Regarde de quel côté est la prise allumée.', 'Tape ◀ si elle est à gauche, ▶ si elle est à droite.', 'Mauvais côté = tu glisses d\'une prise et tu es bloqué un instant.'], score: 'Au temps.' },
-  hockey: { but: 'Duel de hockey sur glace : marquer dans la cage adverse.', ecran: 'La patinoire vue de dessus : toi en bas avec ta crosse, l\'adversaire en haut, le palet noir.', gestes: ['Pose le doigt n\'importe où (pas besoin de cacher ton joueur) et glisse : ton joueur suit le mouvement de ton doigt.', 'C\'est la crosse qui frappe : amène sa lame contre le palet en allant vers lui. Ton corps ne fait que bloquer.', 'La lame se place du côté où tu te déplaces. Tu ne peux pas dépasser la ligne rouge.'], score: 'Premier à 3 buts (2 min, puis but en or). Victoire = 10 pts, défaite = 8 pts.' },
+  hockey: { but: 'Duel de hockey sur glace : marquer dans la cage adverse.', ecran: 'La patinoire vue de dessus : ta crosse en bas, celle de l\'adversaire en haut. Les cages sont avancées : on peut passer derrière, comme au vrai hockey.', gestes: ['Pose le doigt n\'importe où et glisse : ta crosse suit le mouvement de ton doigt.', 'Frappe le palet avec la lame, en allant vers lui : plus ton geste est rapide, plus le tir est fort.', 'Le but compte seulement si le palet entre par l\'ouverture de la cage. Tu restes dans ta moitié de patinoire. Palet bloqué trop longtemps = engagement au centre.'], score: 'Premier à 3 buts (2 min, puis but en or). Victoire = 10 pts, défaite = 8 pts.' },
   patinage: { but: 'Boucler 500 m sur la glace le plus vite possible.', ecran: 'En haut : la piste. En bas : deux zones de glisse, G à gauche et D à droite.', gestes: ['Glisse le pouce gauche vers la GAUCHE dans la zone G, puis le droit vers la DROITE dans la zone D, et ainsi de suite.', 'Plus ton geste est vif, plus la poussée est longue (jusqu\'à 10 m).', 'Un simple tap ne fait presque pas avancer. La même jambe deux fois = tu glisses.'], score: 'Au temps.' },
   biathlon: { but: 'Boucler 1 500 m de ski et toucher un maximum de cibles.', ecran: 'En haut : la piste. En bas : deux boutons G / D, puis au pas de tir une rangée de 5 cibles avec un viseur qui bouge.', gestes: ['Ski : alterne G et D (le même pied deux fois = tu glisses moins loin).', 'À 500 m et 1 000 m : pas de tir. Le viseur oscille, appuie sur 🎯 TIR quand il est bien sur la cible orange.', 'Chaque cible ratée = 2 s de tour de pénalité.'], score: 'Au temps final, pénalités comprises.' },
-  artistique: { but: 'Réussir ton programme : 4 éléments différents, chacun 2 fois (8 en tout), notés par les juges.', ecran: 'En haut : ta patineuse sur la glace. En bas : une grande zone blanche où apparaît l\'élément en cours.', gestes: ['⛸ Saut : un cercle rouge se resserre vers le cercle doré. Tape quand ils se superposent (Parfait 10, Bien 6, Chute 0).', '🌀 Pirouette : fais tourner ton doigt en rond pendant 3 s. Plus de tours = plus de points.', '👣 Séquence de pas : 5 flèches s\'affichent. Glisse dans leur sens, dans l\'ordre, vite et sans erreur.', '✨ Spirale : pose le doigt sur l\'étoile qui glisse et suis-la 4 s sans la perdre.', 'La 2e série est plus rapide.'], score: 'Aux points (10 par élément, 80 max).' },
+  artistique: { but: 'Réussir ton programme : 4 éléments différents, chacun 2 fois (8 en tout), notés par les juges.', ecran: 'En haut : ta patineuse sur la glace. En bas : une grande zone blanche où apparaît l\'élément en cours.', gestes: ['⛸ Saut : un cercle rouge se resserre vers le cercle doré. Tape quand ils se superposent exactement (Parfait 10, Bien 6, Fragile 3, Chute 0).', '🌀 Pirouette : fais tourner ton doigt en rond pendant 3 s. Il faut environ 13 tours rapides pour les 10 points.', '👣 Séquence de pas : 5 flèches s\'affichent. Glisse dans le sens de la flèche entourée : chaque bon geste est validé ✓ en vert, un mauvais sens s\'affiche en rouge.', '✨ Spirale : pose le doigt sur l\'étoile qui glisse et suis-la 4 s sans la perdre.', 'La 2e série est plus rapide.'], score: 'Aux points (10 par élément, 80 max).' },
   bobsleigh: { but: 'Descendre la piste de 800 m le plus vite possible.', ecran: 'Vue derrière ton bob : la piste glacée se dessine devant toi avec ses virages. En bas : ta vitesse, ton temps et deux boutons.', gestes: ['① Poussée (3 s) : tape vite sur les deux boutons, ta vitesse de départ en dépend.', '② Descente : maintiens ⬅ ou ➡ pour te placer. Dans un virage, le bob est déporté vers l\'extérieur : tiens l\'intérieur (une flèche annonce le virage suivant).', 'Toucher la paroi te fait perdre de la vitesse.'], score: 'Au temps.' },
   sautski: { but: 'Voler le plus loin sur le tremplin de vol à ski, en 2 sauts.', ecran: 'Le tremplin de profil, la caméra suit ton sauteur. Repères K 200 et HS 240. En bas : une jauge d\'équilibre et le gros bouton.', gestes: ['① Élan : maintiens le bouton (position accroupie = plus de vitesse).', 'Appel : relâche pile au bout de la table (le trait rose, le bouton devient vert). Trop tôt ou trop tard = moins d\'impulsion.', '② Vol : maintiens pour te pencher, lâche pour te redresser. Garde la flèche dans le vert malgré le vent : c\'est là que tu portes le plus loin.', '③ Réception : près de la neige, le bouton TÉLÉMARK apparaît. Tape-le, sinon −10 % sur la distance.'], score: 'Au meilleur saut.' },
   snowboard: { but: 'Marquer un maximum de points en 6 sauts dans le halfpipe.', ecran: 'Le halfpipe de face : ton rider fait des allers-retours. En bas : une grande zone tactile et une jauge d\'élan.', gestes: ['① Prends de l\'élan : tape au moment où tu passes au fond du pipe. Quand la jauge est verte, tu décolles à la lèvre suivante.', '② En l\'air : fais tourner ton doigt pour faire tourner le rider (180°, 360°, 540°…).', '③ Pour bien poser, arrête-toi sur un demi-tour pile avant de retomber. Rotation de travers = chute.'], score: 'Chaque 180° = 100 pts, + bonus de hauteur.' },

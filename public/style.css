@@ -284,7 +284,9 @@ html[data-theme="dark"] body::before { background: #4a2b5e; }
 html[data-theme="dark"] body::after { background: #ffe08a; opacity: .85; box-shadow: 0 0 40px 10px rgba(255,224,138,.35); }
 /* textes clairs posés sur des aplats colorés (avant : var(--paper), devenu sombre la nuit) */
 html[data-theme="dark"] :is(button, .tapzone, .phase, .cd, .pl.me, .mini div.me, .customhead, .move, .podium .name) { color: var(--night-ink); }
-html[data-theme="dark"] :is(.jump, button.picked, .tile:not(.sel), .tapzone.locked, .record, .md) { color: var(--plum); }
+html[data-theme="dark"] :is(.jump, button.picked, .tile:not(.sel), .tapzone.locked, .record, .md, .podium .block) { color: var(--plum) !important; }
+html[data-theme="dark"] .chips button.sel { background: var(--coral) !important; color: #fff !important; box-shadow: 0 0 0 2px #fff1f5; }
+html[data-theme="dark"] .chips button:disabled { opacity: .3; }
 /* surfaces blanches → surfaces nuit */
 html[data-theme="dark"] :is(.card, button.ghost, .pl, .flags button, .chips button, .tile.t4, .help, .gauge, .mini div, .curl-start, .runbar, .wheel, .segbar span, .seq span, .grid9 button, .range, .ringzone, .custom) { background: var(--surface); color: var(--night-ink); }
 /* aplats prune → prune éclairci pour se détacher du fond */

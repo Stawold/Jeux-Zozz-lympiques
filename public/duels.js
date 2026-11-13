@@ -186,7 +186,7 @@ const FOOT = { win: 3, limit: 120, goal: [32, 68], pr: 8, br: 4, zone: 0.5, fiel
 const PING = { win: 5, limit: 150, goal: [0, 100], pr: 7, br: 3, zone: 0.66, field: '#4a8fe0', friction: 1, minSpeed: 85, serve: 95, maxSpeed: 300, botSpeed: 150, unit: 'points', help: 'Glisse ta raquette pour renvoyer la balle. Une balle qui passe derrière toi = point pour l\'adversaire.' };
 export const football = (root, ctx) => airGame(root, ctx, FOOT);
 const HOCKEY = { ...FOOT, goal: [36, 64], field: '#e3f4ff', friction: 0.85, maxSpeed: 320, botSpeed: 125, relative: true, stick: true, help: 'Pose le doigt où tu veux : ton joueur suit ton glissé. Frappe le palet avec ta crosse ! Interdit de passer la ligne rouge.' };
-export const hockey = (root, ctx) => airGame(root, ctx, HOCKEY);
+export const hockey = (root, ctx) => hockeyGame(root, ctx);
 async function airGame(root, ctx, C) {
   const D = duel(ctx);
   const WIN = C.win, LIMIT = C.limit;
@@ -345,6 +345,197 @@ async function airGame(root, ctx, C) {
     }
     sendAcc += dt;
     if (!D.isBot && sendAcc > 0.045) { sendAcc = 0; ctx.send({ type: 'fb', st: { ball: st.ball, hp: st.hp, s: st.s, t: st.t } }); }
+    draw();
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ---------------- Hockey sur glace : on ne joue que la crosse, cages avancées comme au vrai hockey ---------------- */
+async function hockeyGame(root, ctx) {
+  const D = duel(ctx);
+  const WIN = 3, LIMIT = 120;
+  root.innerHTML = `
+    <div class="hud"><span class="big" id="sc">0 – 0</span><span>vs ${D.oppName}</span><span id="tm">2:00</span></div>
+    <canvas class="full" id="cv"></canvas>
+    <div class="help" id="msg">Pose le doigt où tu veux et glisse : ta crosse suit. Frappe le palet avec la lame. Premier à ${WIN} buts.</div>`;
+  const cv = $(root, '#cv'), msg = $(root, '#msg'), scEl = $(root, '#sc'), tm = $(root, '#tm');
+  const { g, W, H } = fitCanvas(cv);
+  const FW = 100, FH = 160, BR = 3, CR = 16, GX0 = 41, GX1 = 59, GM = 24, GB = 17, BL = 6; // GM : ligne de but, GB : fond de cage, BL : demi-lame
+  const sc = Math.min(W / FW, H / FH), ox = (W - FW * sc) / 2, oy = (H - FH * sc) / 2;
+  const flip = (p) => ({ x: FW - p.x, y: FH - p.y });
+  const toS = (p) => { const q = D.host ? p : flip(p); return [ox + q.x * sc, oy + q.y * sc]; };
+  const st = { ball: { x: 50, y: 80, vx: 0, vy: 0 }, hp: { x: 50, y: 128, vx: 0, vy: 0 }, gp: { x: 50, y: 32, vx: 0, vy: 0 }, s: [0, 0], t: 0, pause: 1, info: '' };
+  let myLocal = { x: 50, y: 128 }, ended = false, lastGp = null, anchor = null;
+  const clampMine = (p) => ({ x: Math.max(4, Math.min(FW - 4, p.x)), y: Math.max(FH / 2 + 4, Math.min(FH - 5, p.y)) });
+  cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); anchor = { fx: e.clientX, fy: e.clientY, x: myLocal.x, y: myLocal.y }; });
+  cv.addEventListener('pointermove', (e) => {
+    if (!anchor) return;
+    const want = { x: anchor.x + (e.clientX - anchor.fx) / sc * 1.3, y: anchor.y + (e.clientY - anchor.fy) / sc * 1.3 };
+    myLocal = clampMine(want);
+    if (myLocal.x !== want.x || myLocal.y !== want.y) anchor = { fx: e.clientX, fy: e.clientY, x: myLocal.x, y: myLocal.y };
+  });
+  const rel = () => (anchor = null); cv.addEventListener('pointerup', rel); cv.addEventListener('pointercancel', rel);
+
+  // côté de la palette (crochet de la lame) : suit le dernier déplacement horizontal
+  const side = { hp: 1, gp: -1 }, prevX = { hp: 50, gp: 50 };
+  function updSide(k, P) { const dx = P.x - prevX[k]; if (Math.abs(dx) > 0.3) side[k] = Math.sign(dx); prevX[k] = P.x; }
+  function drawStick(k, P, col) {
+    const up = k === 'hp' ? 1 : -1; // le manche part vers son propre camp
+    const [bx, by] = toS(P), [hx, hy] = toS({ x: P.x - side[k] * 10, y: P.y + up * 26 });
+    const [l0x, l0y] = toS({ x: P.x - side[k] * BL, y: P.y }), [l1x, l1y] = toS({ x: P.x + side[k] * BL, y: P.y - up * 1.2 });
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(42,22,56,.18)'; g.lineWidth = 7; g.beginPath(); g.moveTo(hx + 3, hy + 3); g.lineTo(l0x + 3, l0y + 3); g.stroke();
+    g.strokeStyle = '#c98b4b'; g.lineWidth = 5; g.beginPath(); g.moveTo(hx, hy); g.lineTo(l0x, l0y); g.stroke();
+    g.strokeStyle = col; g.lineWidth = 5; const [mx, my] = toS({ x: P.x - side[k] * 8, y: P.y + up * 21 }); g.beginPath(); g.moveTo(hx, hy); g.lineTo(mx, my); g.stroke();
+    g.strokeStyle = '#2a1638'; g.lineWidth = 7; g.beginPath(); g.moveTo(l0x, l0y); g.lineTo(l1x, l1y); g.stroke();
+    g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); g.moveTo((l0x + l1x) / 2, (l0y + l1y) / 2); g.lineTo(l1x, l1y); g.stroke();
+  }
+  function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function drawGoal(top) {
+    const m = top ? GM : FH - GM, b = top ? GB : FH - GB;
+    const [ax, ay] = toS({ x: GX0, y: m }), [bx2, by2] = toS({ x: GX1, y: b });
+    // zone de but bleue devant la cage
+    const [cx, cy] = toS({ x: 50, y: m }); const down = (D.host ? !top : top) ? -1 : 1;
+    g.fillStyle = 'rgba(111,141,255,.25)'; g.beginPath(); g.arc(cx, cy, 11 * sc, down > 0 ? 0 : Math.PI, down > 0 ? Math.PI : 2 * Math.PI); g.fill();
+    // filet + cadre
+    const x0 = Math.min(ax, bx2), y0 = Math.min(ay, by2), w = Math.abs(bx2 - ax), h = Math.abs(by2 - ay);
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(x0, y0, w, h);
+    g.strokeStyle = 'rgba(42,22,56,.25)'; g.lineWidth = 1; for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(x0 + w * i / 6, y0); g.lineTo(x0 + w * i / 6, y0 + h); g.stroke(); }
+    g.strokeStyle = '#e8456b'; g.lineWidth = 4; g.beginPath();
+    const [p1x, p1y] = toS({ x: GX0, y: m }), [p2x, p2y] = toS({ x: GX0, y: b }), [p3x, p3y] = toS({ x: GX1, y: b }), [p4x, p4y] = toS({ x: GX1, y: m });
+    g.moveTo(p1x, p1y); g.lineTo(p2x, p2y); g.lineTo(p3x, p3y); g.lineTo(p4x, p4y); g.stroke();
+    g.strokeStyle = 'rgba(232,69,107,.6)'; g.lineWidth = 2; const [lx0, ly] = toS({ x: 0, y: m }), [lx1] = toS({ x: FW, y: m }); g.beginPath(); g.moveTo(Math.min(lx0, lx1) + 8, ly); g.lineTo(Math.max(lx0, lx1) - 8, ly); g.stroke();
+  }
+  function draw() {
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = '#eef8ff'; rr(ox, oy, FW * sc, FH * sc, CR * sc); g.fill();
+    g.strokeStyle = '#2a1638'; g.lineWidth = 3; rr(ox, oy, FW * sc, FH * sc, CR * sc); g.stroke();
+    g.save(); rr(ox, oy, FW * sc, FH * sc, CR * sc); g.clip();
+    g.strokeStyle = '#e8456b'; g.lineWidth = 4; g.beginPath(); g.moveTo(ox, oy + FH * sc / 2); g.lineTo(ox + FW * sc, oy + FH * sc / 2); g.stroke();
+    g.strokeStyle = '#6f8dff'; g.lineWidth = 4; for (const y of [FH * 0.33, FH * 0.67]) { g.beginPath(); g.moveTo(ox, oy + y * sc); g.lineTo(ox + FW * sc, oy + y * sc); g.stroke(); }
+    g.strokeStyle = '#6f8dff'; g.lineWidth = 2; g.beginPath(); g.arc(ox + FW * sc / 2, oy + FH * sc / 2, 12 * sc, 0, 7); g.stroke();
+    drawGoal(true); drawGoal(false);
+    g.restore();
+    updSide('hp', st.hp); updSide('gp', st.gp);
+    const [bx, by] = toS(st.ball);
+    g.fillStyle = 'rgba(42,22,56,.2)'; g.beginPath(); g.ellipse(bx + 2, by + 2, BR * sc, BR * sc * 0.8, 0, 0, 7); g.fill();
+    g.fillStyle = '#1a1024'; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill();
+    drawStick('hp', st.hp, D.host ? D.myCol : D.oppCol); drawStick('gp', st.gp, D.host ? D.oppCol : D.myCol);
+    const mine = D.host ? st.s[0] : st.s[1], theirs = D.host ? st.s[1] : st.s[0];
+    scEl.textContent = `${mine} – ${theirs}`;
+    const left = Math.max(0, LIMIT - st.t);
+    tm.textContent = left > 0 ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'BUT EN OR';
+    if (st.info) { g.fillStyle = '#2a1638'; g.font = '900 22px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText(st.info, W / 2, H / 2 - 18); }
+  }
+  function finish(winnerHost, forfeit) {
+    if (ended) return; ended = true;
+    const win = forfeit || (D.host ? winnerHost : !winnerHost);
+    const mine = D.host ? st.s[0] : st.s[1], theirs = D.host ? st.s[1] : st.s[0];
+    msg.textContent = forfeit ? '🏆 Victoire par forfait' : win ? '🏆 Victoire !' : '😢 Défaite';
+    ctx.finish(win ? 1 : 0, forfeit ? 'forfait' : `${mine}-${theirs}`);
+  }
+  D.onForfeit = () => finish(true, true);
+
+  if (!D.host) {
+    D.handlers.push((d) => {
+      if (d.type === 'hk') { Object.assign(st, d.st); return true; }
+      if (d.type === 'hkend') { st.s = d.s; finish(d.w === 'host', false); return true; }
+      return false;
+    });
+    await countdown(root);
+    const send = setInterval(() => { if (ended || !root.isConnected) return clearInterval(send); ctx.send({ type: 'pad', p: flip(myLocal) }); }, 40);
+    (function loop() { if (!root.isConnected) return; st.gp = { ...st.gp, ...flip(myLocal) }; draw(); if (!ended) requestAnimationFrame(loop); })();
+    return;
+  }
+
+  // ---- Hôte : physique ----
+  D.handlers.push((d) => { if (d.type === 'pad') { lastGp = d.p; return true; } return false; });
+  draw();
+  await countdown(root);
+  function moveStick(P, target, dt, maxV) {
+    let dx = target.x - P.x, dy = target.y - P.y; const d = Math.hypot(dx, dy), m = maxV * dt;
+    if (d > m && d > 0) { dx *= m / d; dy *= m / d; }
+    P.vx = dx / dt; P.vy = dy / dt; P.x += dx; P.y += dy;
+  }
+  // collision palet / segment [a,b] de rayon r ; vel = vitesse du segment
+  function segHit(a, b, r, vel, e) {
+    const B = st.ball, abx = b.x - a.x, aby = b.y - a.y, L2 = abx * abx + aby * aby || 1;
+    const k = Math.max(0, Math.min(1, ((B.x - a.x) * abx + (B.y - a.y) * aby) / L2));
+    const cx = a.x + abx * k, cy = a.y + aby * k, dx = B.x - cx, dy = B.y - cy, d = Math.hypot(dx, dy);
+    if (d >= r + BR || d === 0) return false;
+    const nx = dx / d, ny = dy / d; B.x = cx + nx * (r + BR); B.y = cy + ny * (r + BR);
+    const rv = (B.vx - vel.x) * nx + (B.vy - vel.y) * ny;
+    if (rv < 0) { B.vx -= (1 + e) * rv * nx; B.vy -= (1 + e) * rv * ny; }
+    return true;
+  }
+  function stickHit(P, k) {
+    const up = k === 'hp' ? 1 : -1;
+    const a = { x: P.x - side[k] * BL, y: P.y }, b = { x: P.x + side[k] * BL, y: P.y - up * 1.2 };
+    if (segHit(a, b, 1.6, { x: P.vx * 1.35, y: P.vy * 1.35 }, 0.9)) { sfx('tick'); const B = st.ball, s = Math.hypot(B.vx, B.vy); if (s > 330) { B.vx *= 330 / s; B.vy *= 330 / s; } }
+    segHit({ x: P.x - side[k] * BL, y: P.y }, { x: P.x - side[k] * 10, y: P.y + up * 26 }, 1.2, { x: P.vx, y: P.vy }, 0.5); // manche
+  }
+  function walls() {
+    const B = st.ball;
+    // coins arrondis
+    for (const [cx, cy] of [[CR, CR], [FW - CR, CR], [CR, FH - CR], [FW - CR, FH - CR]]) {
+      const inX = cx === CR ? B.x < CR : B.x > FW - CR, inY = cy === CR ? B.y < CR : B.y > FH - CR;
+      if (!inX || !inY) continue;
+      const dx = B.x - cx, dy = B.y - cy, d = Math.hypot(dx, dy), m = CR - BR;
+      if (d > m) { const nx = dx / d, ny = dy / d; B.x = cx + nx * m; B.y = cy + ny * m; const vn = B.vx * nx + B.vy * ny; if (vn > 0) { B.vx -= 1.8 * vn * nx; B.vy -= 1.8 * vn * ny; } }
+    }
+    if (B.x < BR) { B.x = BR; B.vx = Math.abs(B.vx) * 0.85; } if (B.x > FW - BR) { B.x = FW - BR; B.vx = -Math.abs(B.vx) * 0.85; }
+    if (B.y < BR) { B.y = BR; B.vy = Math.abs(B.vy) * 0.85; } if (B.y > FH - BR) { B.y = FH - BR; B.vy = -Math.abs(B.vy) * 0.85; }
+    // cages : côtés et fond pleins, seule l'ouverture compte
+    for (const [m, b] of [[GM, GB], [FH - GM, FH - GB]]) {
+      const zero = { x: 0, y: 0 };
+      segHit({ x: GX0, y: m }, { x: GX0, y: b }, 0.8, zero, 0.6);
+      segHit({ x: GX1, y: m }, { x: GX1, y: b }, 0.8, zero, 0.6);
+      segHit({ x: GX0, y: b }, { x: GX1, y: b }, 0.8, zero, 0.3);
+    }
+  }
+  function faceoff(info, towardHost) {
+    st.ball = { x: 50, y: FH / 2 + (towardHost === undefined ? 0 : towardHost ? 6 : -6), vx: 0, vy: 0 };
+    st.pause = 1.2; st.info = info; slow = 0; sfx('whistle');
+  }
+  let last = performance.now(), sendAcc = 0, slow = 0;
+  st.pause = 0.6;
+  function step(t) {
+    if (!root.isConnected || ended) return;
+    const dt = Math.max(0.001, Math.min(0.033, (t - last) / 1000)); last = t;
+    st.t += dt;
+    moveStick(st.hp, myLocal, dt, 700);
+    if (D.isBot) {
+      const B = st.ball;
+      const target = B.y < FH / 2 + 6 ? { x: B.x - side.gp * 2, y: Math.max(4, B.y - 4) } : { x: Math.max(36, Math.min(64, B.x)), y: GM + 8 };
+      moveStick(st.gp, { x: target.x, y: Math.min(FH / 2 - 4, target.y) }, dt, 115);
+    } else if (lastGp) moveStick(st.gp, { x: lastGp.x, y: Math.min(FH / 2 - 4, Math.max(5, lastGp.y)) }, dt, 900);
+    if (st.pause > 0) { st.pause -= dt; if (st.pause <= 0) st.info = ''; }
+    else {
+      const B = st.ball;
+      for (let i = 0; i < 4; i++) {
+        const px = B.x, py = B.y;
+        B.x += B.vx * dt / 4; B.y += B.vy * dt / 4;
+        walls(); stickHit(st.hp, 'hp'); stickHit(st.gp, 'gp');
+        // but : le palet entre dans la cage par l'ouverture
+        if (B.x > GX0 && B.x < GX1) {
+          if (py >= GM && B.y < GM && B.vy < 0) { st.s[0]++; sfx(D.host ? 'ok' : 'fail'); buzz(80); faceoff('BUT !', false); break; }
+          if (py <= FH - GM && B.y > FH - GM && B.vy > 0) { st.s[1]++; sfx(D.host ? 'fail' : 'ok'); buzz(80); faceoff('BUT !', true); break; }
+        }
+      }
+      B.vx *= Math.pow(0.8, dt); B.vy *= Math.pow(0.8, dt);
+      // palet coincé ou immobile trop longtemps : engagement au centre
+      if (Math.hypot(B.vx, B.vy) < 6) slow += dt; else slow = 0;
+      if (slow > 2.5) faceoff('Engagement');
+      const [h, gs] = st.s;
+      if (h >= WIN || gs >= WIN || (st.t >= LIMIT && h !== gs)) {
+        const w = h > gs ? 'host' : 'guest';
+        if (!D.isBot) ctx.send({ type: 'hkend', w, s: st.s });
+        draw(); finish(w === 'host', false); return;
+      }
+    }
+    sendAcc += dt;
+    if (!D.isBot && sendAcc > 0.045) { sendAcc = 0; ctx.send({ type: 'hk', st: { ball: st.ball, hp: st.hp, s: st.s, t: st.t, info: st.info } }); }
     draw();
     requestAnimationFrame(step);
   }

@@ -179,8 +179,9 @@ export async function artistique(root, ctx) {
       rz.addEventListener('pointerdown', h);
     });
     jumpT = performance.now() + 600;
-    if (d < 0.06) { add(10, `Parfait ! ${el.n} +10`); sfx('ok'); buzz(30); }
-    else if (d < 0.16) { add(6, `Bien ! ${el.n} +6`); sfx('tick'); }
+    if (d < 0.035) { add(10, `Parfait ! ${el.n} +10`); sfx('ok'); buzz(30); }
+    else if (d < 0.08) { add(6, `Bien ! ${el.n} +6`); sfx('tick'); }
+    else if (d < 0.14) { add(3, `Réception fragile sur le ${el.n} +3`); sfx('tick'); }
     else { add(0, `Chute sur le ${el.n}…`); sfx('fail'); buzz(150); }
   }
   // 2. Pirouette : faire tourner le doigt sur le rond pendant 3 s
@@ -196,38 +197,50 @@ export async function artistique(root, ctx) {
     await sleep(3000);
     rz.removeEventListener('pointerdown', down); rz.removeEventListener('pointermove', move); rz.removeEventListener('pointerup', up);
     spin = 0;
-    const p = Math.min(10, Math.round(turns * (lvl ? 1 : 1.2)));
+    const need = lvl ? 15 : 13; // tours pour 10 pts
+    const p = Math.max(0, Math.min(10, Math.floor((turns - 3) / (need - 3) * 10)));
     add(p, `${el.n} : ${turns.toFixed(1).replace('.', ',')} tours · +${p}`); sfx(p >= 7 ? 'ok' : 'tick');
   }
   // 3. Séquence de pas : reproduire 5 glissés de direction affichés, vite
   async function pas(el, lvl) {
     const DIRS = ['⬆', '➡', '⬇', '⬅'], n = 5, seq = Array.from({ length: n }, () => Math.floor(Math.random() * 4));
-    let i = 0, errors = 0;
-    const lim = lvl ? 4500 : 5500;
-    phase('run', `👣 ${el.n}`, `Glisse dans le sens des flèches, dans l'ordre (${lim / 1000} s)`); rl.textContent = '';
+    let i = 0, errors = 0, flash = null;
+    const lim = lvl ? 5000 : 6000;
+    phase('run', `👣 ${el.n}`, `Glisse dans le sens de la flèche entourée, une à une (${lim / 1000} s)`); rl.textContent = '';
     const paint = () => {
-      rg.clearRect(0, 0, rw, rh); rg.font = '900 30px Unbounded, sans-serif'; rg.textAlign = 'center'; rg.textBaseline = 'middle';
-      seq.forEach((d, k) => { rg.fillStyle = k < i ? W_MINT : k === i ? W_CORAL : 'rgba(42,22,56,.35)'; rg.fillText(DIRS[d], rw / 2 + (k - (n - 1) / 2) * Math.min(56, rw / 6), rh / 2); });
+      rg.clearRect(0, 0, rw, rh); rg.textAlign = 'center'; rg.textBaseline = 'middle';
+      const gap = Math.min(60, rw / 5.6);
+      seq.forEach((d, k) => {
+        const x = rw / 2 + (k - (n - 1) / 2) * gap, y = rh * 0.42;
+        if (k < i) { rg.fillStyle = W_MINT; rg.beginPath(); rg.arc(x, y, gap * 0.42, 0, 7); rg.fill(); }
+        if (k === i) { rg.strokeStyle = flash === 'ko' ? W_CORAL : W_PLUM; rg.lineWidth = 4; rg.beginPath(); rg.arc(x, y, gap * 0.42, 0, 7); rg.stroke(); }
+        rg.font = '900 28px Unbounded, sans-serif';
+        rg.fillStyle = k < i ? W_PLUM : k === i ? (flash === 'ko' ? W_CORAL : W_PLUM) : 'rgba(42,22,56,.3)';
+        rg.fillText(DIRS[d], x, y + 1);
+        if (k < i) { rg.font = '900 14px Unbounded, sans-serif'; rg.fillStyle = '#1f9e6e'; rg.fillText('✓', x, y + gap * 0.62); }
+      });
+      if (flash) { rg.font = '900 22px Unbounded, sans-serif'; rg.fillStyle = flash === 'ok' ? '#1f9e6e' : W_CORAL; rg.fillText(flash === 'ok' ? '✓ Validé !' : '✗ Mauvais sens', rw / 2, rh * 0.78); }
     };
     paint();
     const t0 = performance.now();
     await new Promise((resolve) => {
-      let st = null, fin = false;
+      let st = null, fin = false, ft = 0;
       const down = (e) => { st = pt(e); rz.setPointerCapture(e.pointerId); };
       const up = (e) => {
         if (!st || fin) return; const p = pt(e), dx = p.x - st.x, dy = p.y - st.y; st = null;
         if (Math.hypot(dx, dy) < 25) return;
         const d = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
-        if (d === seq[i]) { i++; sfx('tick'); } else { errors++; sfx('fail'); buzz(60); }
-        paint(); if (i >= n) end();
+        if (d === seq[i]) { i++; flash = 'ok'; sfx('tick'); buzz(20); } else { errors++; flash = 'ko'; sfx('fail'); buzz(80); }
+        clearTimeout(ft); ft = setTimeout(() => { flash = null; if (!fin) paint(); }, 500);
+        paint(); if (i >= n) setTimeout(end, 350);
       };
       const end = () => { if (fin) return; fin = true; clearTimeout(to); rz.removeEventListener('pointerdown', down); rz.removeEventListener('pointerup', up); resolve(); };
       const to = setTimeout(end, lim);
       rz.addEventListener('pointerdown', down); rz.addEventListener('pointerup', up);
     });
     const time = (performance.now() - t0) / 1000;
-    const p = i < n ? i : Math.max(2, 10 - errors * 2 - (time > lim / 2000 ? 1 : 0));
-    add(p, i < n ? `${el.n} incomplète (${i}/${n}) · +${p}` : `${el.n} en ${time.toFixed(1).replace('.', ',')} s · +${p}`);
+    const p = i < n ? Math.max(0, i - errors) : Math.max(2, 10 - errors * 2 - (time > lim / 2000 ? 1 : 0));
+    add(p, i < n ? `${el.n} incomplète (${i}/${n}) · +${p}` : `✓ ${el.n} validée en ${time.toFixed(1).replace('.', ',')} s · +${p}`);
     if (p >= 8) sfx('ok');
   }
   // 4. Spirale : garder le doigt sur l'étoile qui glisse sur la glace (4 s)
