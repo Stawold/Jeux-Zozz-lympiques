@@ -48,6 +48,20 @@ export async function longueur(root, ctx) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     trEl.textContent = `Essai ${attempt}/3`;
     jump = null; runX = 10;
+    // PHASE 0 : le joueur part quand il veut (10 s max, sinon départ automatique)
+    rb.hidden = true; gg.hidden = true;
+    tap.className = 'tapzone jumpbtn'; tap.disabled = false;
+    await new Promise((res) => {
+      let left = 10, fin = false;
+      const upd = () => { tap.textContent = `JE PARS ! (${left})`; phase('wait', `Essai ${attempt}/3 : à toi de partir`, `Tape quand tu es prêt. Départ automatique dans ${left} s`); };
+      upd();
+      const iv = setInterval(() => { left--; if (left <= 0) done(); else upd(); }, 1000);
+      const h = (e) => { e.preventDefault(); done(); };
+      function done() { if (fin) return; fin = true; clearInterval(iv); tap.removeEventListener('pointerdown', h); res(); }
+      tap.addEventListener('pointerdown', h);
+    });
+    tap.disabled = true; tap.className = 'tapzone';
+    for (const n of ['3', '2', '1']) { tap.textContent = n; phase('wait', 'Prêt…', n); sfx('tick'); await sleep(600); }
     // PHASE 1 : élan
     rb.hidden = false; gg.hidden = true; rbi.style.transition = 'none'; rbi.style.transform = 'scaleX(1)';
     tap.className = 'tapzone'; tap.textContent = 'COURS !'; tap.disabled = false;
@@ -248,7 +262,6 @@ async function kickGame(root, ctx, mode) {
   }
   ctx.finish(made, `${made}/${N}`);
 }
-export const basket = (root, ctx) => kickGame(root, ctx, 'basket');
 export const rugby = (root, ctx) => kickGame(root, ctx, 'rugby');
 
 /* ---------------- Mini-golf (3 trous) ---------------- */
@@ -358,4 +371,121 @@ export async function golf(root, ctx) {
     await sleep(1400);
   }
   ctx.finish(-total, total + ' coups');
+}
+
+/* ---------------- Basketball : vue de côté, vraie trajectoire, planche et arceau ---------------- */
+export async function basket(root, ctx) {
+  const N = 5, SPOTS = [0.26, 0.16, 0.36, 0.1, 0.3];
+  root.innerHTML = `
+    <div class="hud"><span class="big" id="s">0 / ${N}</span><span id="t">Tir 1/${N}</span></div>
+    <canvas class="full" id="cv"></canvas>
+    <div class="help" id="msg">Pose le doigt sur la balle et lance-la vers l'arceau d'un geste vers le haut.</div>`;
+  const cv = $(root, '#cv'), msg = $(root, '#msg'), sEl = $(root, '#s'), tEl = $(root, '#t');
+  const { g, W, H } = fitCanvas(cv);
+  const r = W * 0.034, rimY = H * 0.36, x0 = W * 0.70, x1 = x0 + r * 2 * 1.9, board = x1 + W * 0.025;
+  const bTop = rimY - H * 0.16, bBot = rimY + H * 0.03, G = H * 1.9, floor = H * 0.86;
+  let shot = 0, made = 0, ball = null, grab = false, trail = [], net = 0, flash = '';
+  const home = () => ({ x: W * SPOTS[shot], y: H * 0.72 });
+  function physics(b, dt) {
+    const ev = [];
+    b.vy += G * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.vx * dt / r;
+    if (b.x + r > board && b.x < board + 10 && b.y > bTop && b.y < bBot && b.vx > 0) { b.x = board - r; b.vx *= -0.6; b.vy *= 0.9; ev.push('board'); }
+    for (const px of [x0, x1]) {
+      const dx = b.x - px, dy = b.y - rimY, d = Math.hypot(dx, dy), m = r + 2;
+      if (d < m && d > 0) { const nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny; if (vn < 0) { b.vx -= 1.55 * vn * nx; b.vy -= 1.55 * vn * ny; ev.push('rim'); } b.x = px + nx * m; b.y = rimY + ny * m; }
+    }
+    if (b.py < rimY && b.y >= rimY && b.vy > 0 && b.x > x0 && b.x < x1) ev.push('score');
+    if (b.y + r > floor) { b.y = floor - r; b.vy *= -0.55; b.vx *= 0.8; ev.push('floor'); }
+    if (b.x < -r * 3) ev.push('out');
+    b.py = b.y;
+    return ev;
+  }
+  let lt = performance.now(), onEnd = null;
+  function draw(t) {
+    if (!root.isConnected) return;
+    const dt = Math.min(0.05, (t - lt) / 1000); lt = t;
+    // salle
+    g.fillStyle = '#fff1f5'; g.fillRect(0, 0, W, H); stands(g, W, 14);
+    g.fillStyle = '#e9b98a'; g.fillRect(0, floor, W, H - floor);
+    g.strokeStyle = 'rgba(42,22,56,.15)'; g.lineWidth = 1; for (let x = 0; x < W; x += 26) { g.beginPath(); g.moveTo(x, floor); g.lineTo(x, H); g.stroke(); }
+    g.fillStyle = '#fff'; g.fillRect(W * 0.43, floor, 3, H - floor);
+    // poteau + planche
+    g.fillStyle = '#2a1638'; g.fillRect(board + 12, bTop + 10, 8, floor - bTop - 10); g.fillRect(board, bTop + (bBot - bTop) * 0.3, 14, 5);
+    g.fillStyle = 'rgba(255,255,255,.92)'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.fillRect(board, bTop, 9, bBot - bTop); g.strokeRect(board, bTop, 9, bBot - bTop);
+    g.strokeStyle = '#e8456b'; g.strokeRect(board + 1, rimY - H * 0.07, 7, H * 0.07);
+    // filet (derrière la balle à moitié)
+    const sway = Math.sin(t / 60) * net * 4; net *= 0.95;
+    g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 1.5;
+    for (let k = 0; k <= 4; k++) { const xa = x0 + (x1 - x0) * k / 4, xb = x0 + (x1 - x0) * (0.2 + 0.6 * k / 4) + sway; g.beginPath(); g.moveTo(xa, rimY); g.lineTo(xb, rimY + r * 2.6); g.stroke(); }
+    for (let k = 1; k <= 3; k++) { const y = rimY + r * 2.6 * k / 3, sh = (x1 - x0) * 0.2 * k / 3; g.beginPath(); g.moveTo(x0 + sh + sway * k / 3, y); g.lineTo(x1 - sh + sway * k / 3, y); g.stroke(); }
+    // joueur
+    const Hm = home();
+    slime(g, Hm.x - r * 1.6, floor - 16, 16, ctx.color(ctx.me));
+    // balle
+    let b = ball;
+    if (b && b.live) {
+      for (let i = 0; i < 4; i++) {
+        const ev = physics(b, dt / 4);
+        if (ev.includes('board')) { b.board = true; sfx('tick'); }
+        if (ev.includes('rim')) { b.rim = true; sfx('tick'); buzz(15); }
+        if (ev.includes('score') && !b.in) { b.in = true; net = 1; }
+        if (ev.includes('floor')) b.floors++;
+        if (ev.includes('out')) b.floors = 9;
+      }
+      b.age += dt;
+      if (b.floors >= 2 || b.age > 4) { b.live = false; if (onEnd) onEnd(b); }
+    }
+    const bx = b ? b.x : grab && trail.length ? trail[trail.length - 1].x : Hm.x;
+    const by = b ? b.y : grab && trail.length ? trail[trail.length - 1].y : Hm.y;
+    if (!b && !grab) { g.strokeStyle = 'rgba(232,69,107,.6)'; g.lineWidth = 3; g.beginPath(); g.arc(Hm.x, Hm.y, r * 1.8 + Math.sin(t / 200) * 3, 0, 7); g.stroke(); }
+    g.save(); g.translate(bx, by); g.rotate(b ? b.rot : 0);
+    g.fillStyle = '#ff8a2a'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill(); g.stroke();
+    g.lineWidth = 1.5; g.beginPath(); g.moveTo(-r, 0); g.lineTo(r, 0); g.moveTo(0, -r); g.lineTo(0, r); g.stroke();
+    g.beginPath(); g.arc(-r * 1.25, 0, r * 0.85, -0.9, 0.9); g.stroke(); g.beginPath(); g.arc(r * 1.25, 0, r * 0.85, Math.PI - 0.9, Math.PI + 0.9); g.stroke();
+    g.restore();
+    // arceau devant la balle
+    g.strokeStyle = '#e8456b'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, rimY); g.lineTo(x1, rimY); g.lineTo(board, rimY); g.stroke();
+    if (flash) { g.fillStyle = '#2a1638'; g.font = '900 20px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText(flash, W * 0.5, H * 0.16); }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  const pt = (e) => { const q = cv.getBoundingClientRect(); return { x: e.clientX - q.left, y: e.clientY - q.top, t: performance.now() }; };
+  await countdown(root);
+  for (shot = 0; shot < N; shot++) {
+    tEl.textContent = `Tir ${shot + 1}/${N}`; flash = ''; ball = null;
+    msg.textContent = 'Pose le doigt sur la balle et lance-la vers l\'arceau, en cloche.';
+    const v = await new Promise((res) => {
+      const down = (e) => { const p = pt(e), Hm = home(); if (Math.hypot(p.x - Hm.x, p.y - Hm.y) > 70) return; grab = true; trail = [p]; cv.setPointerCapture(e.pointerId); };
+      const move = (e) => { if (!grab) return; trail.push(pt(e)); if (trail.length > 30) trail.shift(); };
+      const up = () => {
+        if (!grab) return; grab = false;
+        const end = trail[trail.length - 1], st = trail.filter((p) => end.t - p.t <= 110)[0];
+        const dx = end.x - st.x, dy = end.y - st.y, dt = Math.max(16, end.t - st.t);
+        const from = { x: end.x, y: end.y }; trail = [];
+        if (dy > -10) { msg.textContent = 'Lance vers le haut, en direction de l\'arceau !'; return; }
+        cv.removeEventListener('pointerdown', down); cv.removeEventListener('pointermove', move); cv.removeEventListener('pointerup', up);
+        // vitesse du geste → vitesse de la balle (amortie et plafonnée)
+        let vx = dx / dt * 1000 * 0.55, vy = dy / dt * 1000 * 0.55;
+        const sp = Math.hypot(vx, vy), max = H * 3.2; if (sp > max) { vx *= max / sp; vy *= max / sp; }
+        res({ vx, vy, from });
+      };
+      cv.addEventListener('pointerdown', down); cv.addEventListener('pointermove', move); cv.addEventListener('pointerup', up);
+    });
+    const Hm = home();
+    const sx = Math.min(Math.max(v.from.x, Hm.x - 60), Hm.x + 60), sy = Math.min(Math.max(v.from.y, Hm.y - 90), Hm.y + 20);
+    const b = await new Promise((res) => { onEnd = res; ball = { x: sx, y: sy, py: sy, vx: v.vx, vy: v.vy, rot: 0, age: 0, floors: 0, live: true }; });
+    onEnd = null;
+    if (b.in) {
+      made++; sfx('ok'); buzz(40);
+      flash = b.board ? 'PANIER avec la planche !' : b.rim ? 'Panier… après l\'arceau !' : 'SWISH ! 🔥';
+      msg.textContent = '✅ ' + flash;
+    } else {
+      sfx('fail');
+      flash = 'Raté';
+      msg.textContent = '❌ ' + (b.rim ? 'Sur l\'arceau… presque !' : b.board ? 'La planche ne suffit pas, vise un peu plus bas.' : b.x < x0 ? 'Trop court : geste plus vif !' : 'Trop long : geste plus doux.');
+    }
+    sEl.textContent = `${made} / ${N}`;
+    await sleep(1100);
+  }
+  ctx.finish(made, `${made}/${N}`);
 }

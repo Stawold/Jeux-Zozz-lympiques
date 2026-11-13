@@ -93,7 +93,7 @@ function pickProgram(mode) {
       case 'artistique': { const p = Math.round(rnd(30, 75)); return { delay: rnd(30, 40) * 1000, score: p, detail: p + ' pts' }; }
       case 'sautski': { const m = Math.round(rnd(130, 245) * 10) / 10; return { delay: rnd(25, 40) * 1000, score: Math.round(m * 10), detail: m.toFixed(1).replace('.', ',') + ' m' }; }
       case 'snowboard': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
-      case 'haltero': { const kg = 100 + 10 * Math.floor(rnd(0, 11)); return { delay: rnd(25, 60) * 1000, score: kg * 100 - Math.floor(rnd(3, 6)), detail: kg + ' kg' }; }
+      case 'haltero': { const kg = 100 + 20 * Math.floor(rnd(0, 6)); return { delay: rnd(25, 60) * 1000, score: kg * 100 - Math.floor(rnd(3, 6)), detail: kg + ' kg' }; }
       case 'arc': { const s = Math.floor(rnd(40, 85)); return { delay: rnd(30, 50) * 1000, score: s, detail: s + ' pts' }; }
       case 'marteau': { const cm = Math.round(rnd(5200, 8500)); return { delay: rnd(15, 25) * 1000, score: cm, detail: (cm / 100).toFixed(2).replace('.', ',') + ' m' }; }
       case 'golf': { const n = Math.floor(rnd(5, 15)); return { delay: rnd(25, 45) * 1000, score: -n, detail: n + ' coups' }; }

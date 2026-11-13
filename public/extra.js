@@ -49,6 +49,9 @@ export async function haltero(root, ctx) {
     // PHASE 1 : soulever
     state = 'lift'; angle = 0; lifted = 0;
     const need = Math.round(14 + (kg - 100) / 10 * 1.6);
+    tap.className = 'tapzone'; tap.disabled = true;
+    for (const n of ['3', '2', '1']) { phase('wait', `${kg} kg : prépare-toi`, `Départ dans ${n}…`); tap.textContent = n; sfx('tick'); await sleep(700); }
+    tap.textContent = 'GO !'; sfx('whistle');
     phase('run', '① Soulève : tape vite !', `${need} taps en 3 secondes`);
     tap.className = 'tapzone'; tap.textContent = 'TAP'; tap.disabled = false;
     let taps = 0, rec = [];
@@ -61,7 +64,7 @@ export async function haltero(root, ctx) {
     if (ok) {
       // PHASE 2 : équilibre
       state = 'balance'; tap.className = 'tapzone jumpbtn'; tap.textContent = T.sensor ? '⇆ Incline' : '⇆ Glisse';
-      phase('jump', '② Tiens la barre droite !', T.sensor ? 'Incline le téléphone pour la redresser' : 'Glisse le doigt à gauche ou à droite pour la redresser');
+      phase('jump', '② Tiens la barre droite !', T.sensor ? 'Incline le téléphone du côté opposé à celui qui descend' : 'Glisse le doigt du côté opposé à celui qui descend');
       T.recalibrate(); sfx('thud'); buzz(60);
       const level = (kg - 100) / 10;
       let vel = 0, push = 0, last = performance.now(); const start = last;
@@ -69,7 +72,7 @@ export async function haltero(root, ctx) {
         await sleep(16);
         const now = performance.now(), dt = (now - last) / 1000; last = now;
         if (Math.random() < dt * (1.5 + level * 0.25)) push = (Math.random() - 0.5) * (30 + level * 9);
-        vel += (push + angle * 0.9 - T.value() * 70) * dt; vel *= Math.pow(0.25, dt);
+        vel += (push + angle * 0.9 + T.value() * 70) * dt; vel *= Math.pow(0.25, dt);
         angle += vel * dt * 4; push *= Math.pow(0.3, dt);
         rbi.style.transform = `scaleX(${1 - (now - start) / 3000})`;
         if (Math.abs(angle) > 25) { ok = false; break; }
@@ -78,7 +81,7 @@ export async function haltero(root, ctx) {
     tap.disabled = true; state = 'idle';
     if (ok) {
       best = kg; bEl.textContent = 'Meilleur : ' + best + ' kg'; sfx('ok'); buzz([40, 40, 40]);
-      phase('wait', `✅ ${kg} kg validés !`, 'Barre suivante : +10 kg'); fails = 0; kg += 10;
+      phase('wait', `✅ ${kg} kg validés !`, 'Barre suivante : +20 kg'); fails = 0; kg += 20;
     } else {
       fails++; totalFails++; sfx('fail'); buzz(200); lifted = 0; angle = Math.sign(angle || 1) * 30;
       phase('wait', `❌ Essai manqué (${fails}/3)`, fails < 3 ? 'Même barre, nouvel essai' : 'Fin de la compétition');
