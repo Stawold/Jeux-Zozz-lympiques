@@ -267,3 +267,8 @@ button { white-space: normal; overflow-wrap: anywhere; }
 .chips button .ord { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--coral); color: #fff; font: 800 11px var(--display); margin-right: 5px; }
 .chips button:disabled { opacity: .35; }
 .order { margin: 10px 0 0; padding-left: 22px; font: 600 13px var(--body); columns: 2; }
+
+/* Patinage de vitesse : zones de glisse */
+.swz { display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.swz small { font: 600 11px var(--body); opacity: .85; margin-top: 4px; }
+.swz.on { filter: brightness(1.12); transform: scale(.98); }

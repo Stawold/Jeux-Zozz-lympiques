@@ -287,60 +287,31 @@ export async function aviron(root, ctx) {
 /* ---------- Patinage de vitesse 500 m : alterner pied gauche / pied droit ---------- */
 export async function patinage(root, ctx) {
   const R = raceScreen(root, ctx, 'patinage');
-  R.ctl.innerHTML = `<div class="duo"><button class="tapzone" id="L" disabled>◀ G</button><button class="tapzone" id="Rb" disabled>D ▶</button></div>
-    <div class="help" id="hint">Alterne gauche, droite, gauche… Deux fois le même pied = tu glisses.</div>`;
-  const L = $(root, '#L'), Rb = $(root, '#Rb'), hint = $(root, '#hint'), ok = limiter(14);
-  let last = -1;
-  await R.go(); L.disabled = Rb.disabled = false;
-  const stride = (side) => (e) => {
-    e.preventDefault(); if (!ok()) return;
-    if (side === last) { R.advance(1); R.trip(); sfx('fail'); hint.textContent = '💥 Même pied deux fois : tu glisses !'; }
-    else { R.advance(5); hint.textContent = side ? 'Pied droit… gauche maintenant !' : 'Pied gauche… droit maintenant !'; }
-    last = side;
+  R.ctl.innerHTML = `<div class="duo swipeduo"><div class="tapzone swz" id="L">⟵ G<small>glisse vers la gauche</small></div><div class="tapzone swz" id="Rb">D ⟶<small>glisse vers la droite</small></div></div>
+    <div class="help" id="hint">Glisse le pouce gauche vers la gauche, puis le droit vers la droite… Plus le geste est vif, plus tu vas loin.</div>`;
+  const L = $(root, '#L'), Rb = $(root, '#Rb'), hint = $(root, '#hint');
+  let last = -1, live = false;
+  await R.go(); live = true;
+  const zone = (el, side) => {
+    let st = null;
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!live) return; st = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; el.setPointerCapture(e.pointerId); el.classList.add('on'); });
+    const end = (e) => {
+      if (!st || e.pointerId !== st.id) return;
+      el.classList.remove('on');
+      const dx = (e.clientX - st.x) * (side ? 1 : -1), dist = Math.hypot(e.clientX - st.x, e.clientY - st.y), dt = Math.max(30, performance.now() - st.t);
+      st = null; if (!live) return;
+      if (dx < 30) { R.advance(0.5); hint.textContent = side ? 'Glisse vers la DROITE, pas juste un tap !' : 'Glisse vers la GAUCHE, pas juste un tap !'; return; }
+      if (side === last) { R.advance(1); R.trip(); sfx('fail'); hint.textContent = '💥 Même jambe deux fois : tu glisses !'; return; }
+      const v = Math.min(2.2, dist / dt); // px/ms
+      const m = Math.min(10, 3 + v * 4);
+      R.advance(m); sfx('tick');
+      hint.textContent = (v > 1.4 ? '🔥 Poussée puissante ! ' : v > 0.8 ? 'Bonne poussée. ' : 'Poussée molle… plus vif ! ') + (side ? 'Gauche maintenant.' : 'Droite maintenant.');
+      last = side;
+    };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
   };
-  L.addEventListener('pointerdown', stride(0)); Rb.addEventListener('pointerdown', stride(1));
-  R.onFinish = () => { L.disabled = Rb.disabled = true; };
-}
-
-/* ---------- Bobsleigh : poussée au départ puis virages au bon côté ---------- */
-export async function bobsleigh(root, ctx) {
-  const R = raceScreen(root, ctx, 'bobsleigh');
-  R.ctl.innerHTML = `<div class="phase ph-run" id="ph">① Poussée : tape vite !</div>
-    <div class="duo"><button class="tapzone" id="L" disabled>⬅</button><button class="tapzone" id="Rb" disabled>➡</button></div>`;
-  const L = $(root, '#L'), Rb = $(root, '#Rb'), ph = $(root, '#ph'), ok = limiter(15);
-  await R.go(); L.disabled = Rb.disabled = false;
-  // Phase 1 : poussée (3 s), les deux boutons comptent
-  let taps = 0, phase = 'push', want = -1, deadline = 0, speed = 0, nextCurve = Infinity;
-  const onTap = (side) => (e) => {
-    e.preventDefault();
-    if (phase === 'push') { if (ok()) { taps++; R.advance(0.6); } return; }
-    if (want < 0) return;
-    if (side === want) { speed = Math.min(130, speed + 6); sfx('tick'); ph.className = 'phase ph-jump'; ph.textContent = '✅ Bonne trajectoire !'; }
-    else { speed = Math.max(40, speed - 20); R.trip(); sfx('fail'); ph.className = 'phase ph-run'; ph.textContent = '💥 Tu tapes la paroi !'; }
-    want = -1; nextCurve = performance.now() + 700 + Math.random() * 900; L.className = Rb.className = 'tapzone';
-  };
-  L.addEventListener('pointerdown', onTap(0)); Rb.addEventListener('pointerdown', onTap(1));
-  await sleep(3000);
-  phase = 'run'; speed = 40 + Math.min(30, taps) * 2;
-  ph.className = 'phase ph-wait'; ph.textContent = `Vitesse de départ : ${Math.round(speed)} km/h · suis les virages !`;
-  let lastT = performance.now(); nextCurve = performance.now() + 1200;
-  await new Promise((res) => {
-    function frame(t) {
-      if (!root.isConnected || R.finished) return res();
-      const dt = Math.max(0, Math.min(0.05, (t - lastT) / 1000)); lastT = t;
-      R.advance(speed / 3.6 * dt * 3); // échelle de jeu : ~12 à 20 s de descente
-      if (want < 0 && t > nextCurve) {
-        want = Math.random() < 0.5 ? 0 : 1; deadline = t + 900;
-        (want ? Rb : L).className = 'tapzone jumpbtn'; (want ? L : Rb).className = 'tapzone';
-        ph.className = 'phase ph-wait'; ph.textContent = want ? 'Virage à DROITE ➡' : '⬅ Virage à GAUCHE';
-        buzz(30);
-      }
-      if (want >= 0 && t > deadline) { speed = Math.max(40, speed - 20); R.trip(); sfx('fail'); ph.className = 'phase ph-run'; ph.textContent = '💥 Trop tard, tu tapes la paroi !'; want = -1; nextCurve = t + 700 + Math.random() * 900; L.className = Rb.className = 'tapzone'; }
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-  });
-  L.disabled = Rb.disabled = true;
+  zone(L, 0); zone(Rb, 1);
+  R.onFinish = () => { live = false; };
 }
 
 /* ---------- Biathlon : 3 boucles de ski, 2 passages au tir (5 cibles chacun) ---------- */
@@ -363,7 +334,11 @@ export async function biathlon(root, ctx) {
   L.addEventListener('pointerdown', stride(0)); Rb.addEventListener('pointerdown', stride(1));
   async function shoot() {
     mode = 'shoot'; stand++;
-    ph.className = 'phase ph-wait'; ph.textContent = `Pas de tir ${stand}/2 : 5 cibles`;
+    L.disabled = Rb.disabled = true;
+    ph.className = 'phase ph-wait'; ph.textContent = `🎿 Arrivée au pas de tir ${stand}/2…`;
+    sfx('whistle'); await sleep(1300);
+    ph.textContent = 'Pose les skis, prends ta carabine…'; await sleep(1200);
+    ph.className = 'phase ph-jump'; ph.textContent = `Pas de tir ${stand}/2 : 5 cibles`;
     skiz.hidden = true; range.hidden = false; fire.hidden = false; sfx('whistle');
     tg.innerHTML = Array.from({ length: 5 }, () => '<span></span>').join('');
     const spots = [...tg.children];
@@ -377,9 +352,9 @@ export async function biathlon(root, ctx) {
           if (fin || !root.isConnected) return;
           const t = (performance.now() - t0) / 1000;
           // le viseur oscille autour de la cible ; il se calme au bout d'une seconde puis se remet à trembler
-          const amp = t < 1 ? 1 - t * 0.7 : 0.3 + (t - 1) * 0.35;
-          const off = Math.min(1.4, amp) * (Math.sin(t * 3.1 + ph0) * 0.7 + Math.sin(t * 7.3 + ph0) * 0.3);
-          const cx = (i + 0.5) / 5 * 100 + off * 9;
+          // grand balayage gauche-droite : il faut tirer au moment où le viseur passe sur la cible
+          const off = 1.9 * Math.sin(t * (2.4 + i * 0.25) + ph0) + 0.12 * Math.sin(t * 9 + ph0);
+          const cx = Math.max(3, Math.min(97, (i + 0.5) / 5 * 100 + off * 10));
           cr.style.left = cx + '%'; cr.dataset.off = off;
           requestAnimationFrame(sway);
         })();
@@ -392,12 +367,14 @@ export async function biathlon(root, ctx) {
       await sleep(250);
     }
     fire.hidden = true; range.hidden = true; skiz.hidden = false;
+    ph.className = 'phase ph-wait'; ph.textContent = `${5 - misses}/5 : ${misses ? 'remets tes skis…' : 'sans faute ! Remets tes skis…'}`;
+    await sleep(1200);
     if (misses) {
       ph.className = 'phase ph-run'; ph.textContent = `${misses} raté${misses > 1 ? 's' : ''} : tour de pénalité (${misses * 2} s)`;
       R.trip(); await sleep(misses * 2000);
     }
     ph.className = 'phase ph-run'; ph.textContent = stand < 2 ? 'Ski : alterne G / D' : 'Dernière boucle : à fond !';
-    mode = 'ski';
+    mode = 'ski'; L.disabled = Rb.disabled = false;
   }
   R.onFinish = () => { L.disabled = Rb.disabled = true; };
 }

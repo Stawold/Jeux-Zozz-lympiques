@@ -82,7 +82,7 @@ function pickProgram(mode) {
 
   const t2 = (t) => ({ score: -Math.round(t * 100) / 100, detail: t.toFixed(2) + ' s' });
   function botResult(ev) {
-    const race = { sprint: [9.5, 15], haies: [12, 20], cyclisme: [8, 16], natation: [15, 26], aviron: [17.5, 28], tir: [7.5, 16], escalade: [6, 12], ski: [18.6, 30], patinage: [10.5, 18], bobsleigh: [16, 26], biathlon: [32, 55] }[ev];
+    const race = { sprint: [9.5, 15], haies: [12, 20], cyclisme: [8, 16], natation: [15, 26], aviron: [17.5, 28], tir: [7.5, 16], escalade: [6, 12], ski: [18.6, 30], patinage: [10.5, 18], bobsleigh: [21, 34], biathlon: [32, 55] }[ev];
     if (race) { const t = rnd(...race); return { delay: t * 1000 + 2600, t, ...t2(t) }; }
     switch (ev) {
       case 'hauteur': { const k = Math.floor(rnd(0, 9)), f = Math.floor(rnd(3, 6)); const h = k ? 150 + (k - 1) * 10 : 0; return { delay: rnd(8, 25) * 1000, score: h * 100 - f, detail: h ? (h / 100).toFixed(2).replace('.', ',') + ' m' : '0 m' }; }
@@ -90,9 +90,9 @@ function pickProgram(mode) {
       case 'hiphop': { const s = Math.floor(rnd(60, 260)); return { delay: 62600, score: s, detail: s + ' pts' }; }
       case 'skate': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'basket': case 'rugby': { const n = Math.floor(rnd(1, 6)); return { delay: rnd(14, 24) * 1000, score: n, detail: n + '/5' }; }
-      case 'artistique': { const p = Math.round(rnd(30, 75)); return { delay: rnd(30, 40) * 1000, score: p, detail: p + ' pts' }; }
+      case 'artistique': { const p = Math.round(rnd(30, 75)); return { delay: rnd(45, 60) * 1000, score: p, detail: p + ' pts' }; }
       case 'sautski': { const m = Math.round(rnd(130, 245) * 10) / 10; return { delay: rnd(25, 40) * 1000, score: Math.round(m * 10), detail: m.toFixed(1).replace('.', ',') + ' m' }; }
-      case 'snowboard': { const n = Math.floor(rnd(1, 7)), s = n * 100 + Math.floor(rnd(0, n * 30)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
+      case 'snowboard': { const s = Math.round(rnd(250, 1100)); return { delay: rnd(40, 70) * 1000, score: s, detail: s + ' pts' }; }
       case 'haltero': { const kg = 100 + 20 * Math.floor(rnd(0, 6)); return { delay: rnd(25, 60) * 1000, score: kg * 100 - Math.floor(rnd(3, 6)), detail: kg + ' kg' }; }
       case 'arc': { const s = Math.floor(rnd(40, 85)); return { delay: rnd(30, 50) * 1000, score: s, detail: s + ' pts' }; }
       case 'marteau': { const cm = Math.round(rnd(5200, 8500)); return { delay: rnd(15, 25) * 1000, score: cm, detail: (cm / 100).toFixed(2).replace('.', ',') + ' m' }; }

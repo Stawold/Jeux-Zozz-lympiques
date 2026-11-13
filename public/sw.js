@@ -1,6 +1,6 @@
 // Jeux Ose’Lympiques — cache pour jouer contre les bots sans réseau
-const CACHE = 'oselympiques-v7';
-const SHELL = ['./', 'index.html', 'style.css', 'main.js', 'kit.js', 'games.js', 'races.js', 'solos.js', 'duels.js', 'extra.js', 'bots.js', 'manifest.json', 'icon-192.png', 'icon-512.png',
+const CACHE = 'oselympiques-v8';
+const SHELL = ['./', 'index.html', 'style.css', 'main.js', 'kit.js', 'games.js', 'races.js', 'solos.js', 'duels.js', 'extra.js', 'winter.js', 'bots.js', 'manifest.json', 'icon-192.png', 'icon-512.png',
   'https://unpkg.com/three@0.160.0/build/three.module.js'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(new Request(u, { mode: u.startsWith('http') ? 'no-cors' : 'same-origin' })).catch(() => {})))));

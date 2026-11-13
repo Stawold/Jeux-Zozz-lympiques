@@ -99,7 +99,6 @@ export async function longueur(root, ctx) {
 }
 
 /* ---------------- Skateboard : séquences à reproduire ---------------- */
-export const snowboard = (root, ctx) => skate(root, ctx, true);
 export async function skate(root, ctx, snow = false) {
   const TRICKS = snow ? ['Indy', 'Method', 'McTwist', 'Frontside 720', 'Double Cork', 'Triple Cork 1440'] : ['Ollie', 'Kickflip', 'Heelflip', '360 Flip', 'Impossible', 'Darkslide'];
   const AR = ['⬅️', '⬇️', '⬆️', '➡️'];

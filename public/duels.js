@@ -185,7 +185,7 @@ export async function escrime(root, ctx) {
 const FOOT = { win: 3, limit: 120, goal: [32, 68], pr: 8, br: 4, zone: 0.5, field: '#7fd6a3', friction: 0.6, minSpeed: 0, serve: 0, maxSpeed: 260, botSpeed: 115, unit: 'buts', help: 'Garde le doigt sur ton slime pour le déplacer. Interdit de passer la ligne du milieu.' };
 const PING = { win: 5, limit: 150, goal: [0, 100], pr: 7, br: 3, zone: 0.66, field: '#4a8fe0', friction: 1, minSpeed: 85, serve: 95, maxSpeed: 300, botSpeed: 150, unit: 'points', help: 'Glisse ta raquette pour renvoyer la balle. Une balle qui passe derrière toi = point pour l\'adversaire.' };
 export const football = (root, ctx) => airGame(root, ctx, FOOT);
-const HOCKEY = { ...FOOT, goal: [36, 64], field: '#e3f4ff', friction: 0.85, maxSpeed: 300, botSpeed: 125, help: 'Garde le doigt sur ton slime pour le déplacer. Le palet glisse beaucoup sur la glace ! Interdit de passer la ligne rouge.' };
+const HOCKEY = { ...FOOT, goal: [36, 64], field: '#e3f4ff', friction: 0.85, maxSpeed: 320, botSpeed: 125, relative: true, stick: true, help: 'Pose le doigt où tu veux : ton joueur suit ton glissé. Frappe le palet avec ta crosse ! Interdit de passer la ligne rouge.' };
 export const hockey = (root, ctx) => airGame(root, ctx, HOCKEY);
 async function airGame(root, ctx, C) {
   const D = duel(ctx);
@@ -205,8 +205,26 @@ async function airGame(root, ctx, C) {
   let myLocal = { x: 50, y: 140 }, ended = false, lastGp = null;
   // saisie : position du doigt dans MON repère (moi en bas)
   const pt = (e) => { const r = cv.getBoundingClientRect(); return { x: Math.max(PR, Math.min(FW - PR, (e.clientX - r.left - ox) / sc)), y: Math.max(ZY + PR, Math.min(FH - PR, (e.clientY - r.top - oy) / sc)) }; };
-  cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); myLocal = pt(e); });
-  cv.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') myLocal = pt(e); });
+  const clampP = (p) => ({ x: Math.max(PR, Math.min(FW - PR, p.x)), y: Math.max(ZY + PR, Math.min(FH - PR, p.y)) });
+  let anchor = null;
+  if (C.relative) {
+    // doigt n'importe où : le joueur suit le déplacement du doigt (comme un pavé tactile)
+    cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); anchor = { fx: e.clientX, fy: e.clientY, x: myLocal.x, y: myLocal.y }; });
+    cv.addEventListener('pointermove', (e) => { if (!anchor) return; myLocal = clampP({ x: anchor.x + (e.clientX - anchor.fx) / sc * 1.25, y: anchor.y + (e.clientY - anchor.fy) / sc * 1.25 }); if (myLocal.x <= PR || myLocal.x >= FW - PR || myLocal.y <= ZY + PR || myLocal.y >= FH - PR) anchor = { fx: e.clientX, fy: e.clientY, x: myLocal.x, y: myLocal.y }; });
+    const rel = () => (anchor = null); cv.addEventListener('pointerup', rel); cv.addEventListener('pointercancel', rel);
+  } else {
+    cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); myLocal = pt(e); });
+    cv.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') myLocal = pt(e); });
+  }
+  // crosse : lame devant le joueur, du côté où il se déplace
+  const side = { hp: 1, gp: -1 }, prevX = { hp: 50, gp: 50 };
+  const blade = (P, k) => ({ x: P.x + side[k] * PR * 0.75, y: P.y + (k === 'hp' ? -1 : 1) * PR * 0.95 });
+  function updSide(k, P) { const dx = P.x - prevX[k]; if (Math.abs(dx) > 0.25) side[k] = Math.sign(dx); prevX[k] = P.x; }
+  function drawStick(k, P) {
+    const B = blade(P, k), [px, py] = toScreen(P), [bx, by] = toScreen(B);
+    g.strokeStyle = '#7a4a21'; g.lineWidth = 3.5; g.lineCap = 'round'; g.beginPath(); g.moveTo(px, py); g.lineTo(bx, by); g.stroke();
+    const [ex] = toScreen({ x: B.x + side[k] * 2.6, y: B.y }); g.strokeStyle = '#2a1638'; g.lineWidth = 6; g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, by); g.stroke();
+  }
 
   function draw() {
     g.clearRect(0, 0, W, H);
@@ -219,8 +237,10 @@ async function airGame(root, ctx, C) {
     g.fillStyle = D.oppCol; g.fillRect(gx0, oy - 5, gw, 10); g.fillStyle = D.myCol; g.fillRect(gx0, oy + FH * sc - 5, gw, 10);
     g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.strokeRect(gx0, oy - 5, gw, 10); g.strokeRect(gx0, oy + FH * sc - 5, gw, 10);
     const [hx, hy] = toScreen(st.hp), [gx, gy] = toScreen(st.gp);
+    if (C.stick) { updSide('hp', st.hp); updSide('gp', st.gp); }
     slime(g, hx, hy, PR * sc, D.host ? D.myCol : D.oppCol);
     slime(g, gx, gy, PR * sc, D.host ? D.oppCol : D.myCol);
+    if (C.stick) { drawStick('hp', st.hp); drawStick('gp', st.gp); }
     const [bx, by] = toScreen(st.ball);
     g.fillStyle = C.field === '#e3f4ff' ? '#2a1638' : '#fff'; g.strokeStyle = '#2a1638'; g.lineWidth = 2; g.beginPath(); g.arc(bx, by, BR * sc, 0, 7); g.fill(); g.stroke();
     g.fillStyle = C.field === '#e3f4ff' ? '#4a2b5e' : '#2a1638'; g.beginPath(); g.arc(bx, by, BR * sc * 0.4, 0, 7); g.fill();
@@ -272,6 +292,23 @@ async function airGame(root, ctx, C) {
       const s = Math.hypot(b.vx, b.vy); if (s > C.maxSpeed) { b.vx *= C.maxSpeed / s; b.vy *= C.maxSpeed / s; }
     }
   }
+  // hockey : le corps ne fait que bloquer (rebond amorti), c'est la crosse qui frappe
+  function hitHockey(P, k) {
+    const b = st.ball;
+    let dx = b.x - P.x, dy = b.y - P.y, d = Math.hypot(dx, dy);
+    if (d < PR + BR && d > 0) {
+      const nx = dx / d, ny = dy / d; b.x = P.x + nx * (PR + BR); b.y = P.y + ny * (PR + BR);
+      const vn = b.vx * nx + b.vy * ny; if (vn < 0) { b.vx -= 1.5 * vn * nx; b.vy -= 1.5 * vn * ny; }
+    }
+    const Bl = blade(P, k), RB = 3.2;
+    dx = b.x - Bl.x; dy = b.y - Bl.y; d = Math.hypot(dx, dy);
+    if (d < RB + BR && d > 0) {
+      const nx = dx / d, ny = dy / d; b.x = Bl.x + nx * (RB + BR); b.y = Bl.y + ny * (RB + BR);
+      const rv = (b.vx - P.vx * 1.4) * nx + (b.vy - P.vy * 1.4) * ny;
+      if (rv < 0) { b.vx -= 2 * rv * nx; b.vy -= 2 * rv * ny; sfx('tick'); }
+      const s = Math.hypot(b.vx, b.vy); if (s > C.maxSpeed) { b.vx *= C.maxSpeed / s; b.vy *= C.maxSpeed / s; }
+    }
+  }
   function serve(towardHostSide) { st.ball = { x: 50, y: towardHostSide ? 100 : 60, vx: (Math.random() - 0.5) * C.serve * 0.6, vy: towardHostSide ? C.serve : -C.serve }; st.pause = 1; sfx('whistle'); }
   let last = performance.now(), sendAcc = 0;
   function step(t) {
@@ -293,7 +330,7 @@ async function airGame(root, ctx, C) {
         const inGoal = b.x > GOAL[0] && b.x < GOAL[1];
         if (b.y < BR && !inGoal) { b.y = BR; b.vy = Math.abs(b.vy); }
         if (b.y > FH - BR && !inGoal) { b.y = FH - BR; b.vy = -Math.abs(b.vy); }
-        hit(st.hp); hit(st.gp);
+        if (C.stick) { hitHockey(st.hp, 'hp'); hitHockey(st.gp, 'gp'); } else { hit(st.hp); hit(st.gp); }
       }
       b.vx *= Math.pow(C.friction, dt); b.vy *= Math.pow(C.friction, dt);
       if (C.minSpeed) { const sp = Math.hypot(b.vx, b.vy); if (sp < C.minSpeed) { const k = sp > 1 ? C.minSpeed / sp : 0; if (k) { b.vx *= k; b.vy *= k; } else b.vy = b.y < FH / 2 ? C.minSpeed : -C.minSpeed; } }

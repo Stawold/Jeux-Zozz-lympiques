@@ -343,8 +343,9 @@ async function curling(root, ctx) {
   }
 
   function score() {
-    const inHouse = stones.map((s) => ({ ...s, d: Math.hypot(s.x, s.y) })).filter((s) => s.d <= HOUSE + R).sort((a, b) => a.d - b.d);
-    if (!inHouse.length) return { winner: null, pts: 0 };
+    // la pierre la plus proche du centre gagne, même hors de la maison
+    const inHouse = stones.map((s) => ({ ...s, d: Math.hypot(s.x, s.y) })).sort((a, b) => a.d - b.d);
+    if (!inHouse.length) return { winner: firstIsMe ? 'opp' : 'me', pts: 0 }; // aucune pierre restée en jeu : avantage au dernier lanceur
     const w = inHouse[0].owner;
     const firstOther = inHouse.find((s) => s.owner !== w);
     const pts = inHouse.filter((s) => s.owner === w && (!firstOther || s.d < firstOther.d)).length;
@@ -360,9 +361,7 @@ async function curling(root, ctx) {
 
   draw();
   await sleep(600);
-  let extra = 0;
-  while (!ended) {
-    while (turn < order.length && !ended) {
+  while (turn < order.length && !ended) {
       const who = order[turn], n = turn;
       if (who === 'me') {
         const v = await myThrow();
@@ -389,19 +388,12 @@ async function curling(root, ctx) {
         }
       }
       turn++;
-    }
-    if (ended) break;
+  }
+  if (!ended) {
+    // 3 pierres chacun, pas une de plus
     const r = score();
-    if (r.winner) {
-      endGame(r.winner === 'me', r.winner === 'me' ? `${r.pts}-0` : `0-${r.pts}`);
-    } else {
-      // égalité / maison vide : une pierre de plus chacun
-      extra++;
-      msg.textContent = '⚖️ Maison vide : une pierre de plus chacun !';
-      await sleep(1500);
-      order.push(firstIsMe ? 'me' : 'opp', firstIsMe ? 'opp' : 'me');
-      if (extra > 5) endGame(firstIsMe, 'égalité');
-    }
+    const det = r.pts ? (r.winner === 'me' ? `${r.pts}-0` : `0-${r.pts}`) : 'aucune pierre en jeu';
+    endGame(r.winner === 'me', det);
   }
 }
 
