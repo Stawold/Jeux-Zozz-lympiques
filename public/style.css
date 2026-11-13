@@ -272,3 +272,33 @@ button { white-space: normal; overflow-wrap: anywhere; }
 .swz { display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 .swz small { font: 600 11px var(--body); opacity: .85; margin-top: 4px; }
 .swz.on { filter: brightness(1.12); transform: scale(.98); }
+
+/* ---------- Mode nuit ---------- */
+.themebtn { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right, 0px)); z-index: 3; width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 20px; line-height: 1; background: var(--paper); color: var(--plum); box-shadow: 0 2px 0 rgba(42,22,56,.15), inset 0 0 0 2px var(--paper-2); margin: 0; }
+html[data-theme="dark"] {
+  --paper: #170d21; --paper-2: #3a2550; --surface: #2a1a3a; --night-ink: #fff1f5; --night-plum: #44295c;
+  color-scheme: dark;
+}
+html[data-theme="dark"] body { color: var(--night-ink); background: var(--paper); }
+html[data-theme="dark"] body::before { background: #4a2b5e; }
+html[data-theme="dark"] body::after { background: #ffe08a; opacity: .85; box-shadow: 0 0 40px 10px rgba(255,224,138,.35); }
+/* textes clairs posés sur des aplats colorés (avant : var(--paper), devenu sombre la nuit) */
+html[data-theme="dark"] :is(button, .tapzone, .phase, .cd, .pl.me, .mini div.me, .customhead, .move, .podium .name) { color: var(--night-ink); }
+html[data-theme="dark"] :is(.jump, button.picked, .tile:not(.sel), .tapzone.locked, .record, .md) { color: var(--plum); }
+/* surfaces blanches → surfaces nuit */
+html[data-theme="dark"] :is(.card, button.ghost, .pl, .flags button, .chips button, .tile.t4, .help, .gauge, .mini div, .curl-start, .runbar, .wheel, .segbar span, .seq span, .grid9 button, .range, .ringzone, .custom) { background: var(--surface); color: var(--night-ink); }
+/* aplats prune → prune éclairci pour se détacher du fond */
+html[data-theme="dark"] :is(.codecard, .hud, .pos, #toast, .wait, .tile.sel, .chips button.sel, button.alt, .flags button.sel, .card.dark, .trybar .pillbtn) { background: var(--night-plum); color: var(--night-ink); }
+html[data-theme="dark"] :is(h1.logo, .title, .ringzone span, .wheel, .mini div, .grid9 button) { color: var(--night-ink); }
+html[data-theme="dark"] input { background: var(--surface); color: var(--night-ink); border-color: var(--paper-2); }
+html[data-theme="dark"] button.pillbtn { background: var(--surface); color: var(--night-ink); }
+html[data-theme="dark"] .gauge .arrow { background: var(--night-ink); }
+html[data-theme="dark"] .wheel { box-shadow: inset 0 0 0 10px var(--night-plum); }
+html[data-theme="dark"] .wheel span, html[data-theme="dark"] :is(.swimzone, .rowzone) b { background: var(--paper); color: var(--night-ink); }
+html[data-theme="dark"] .blob.add { border-color: var(--night-ink); }
+html[data-theme="dark"] .custom.on { box-shadow: 0 0 0 3px var(--rose); }
+html[data-theme="dark"] .range .targets span { border-color: var(--surface); }
+html[data-theme="dark"] .card.dark .pl { color: var(--night-ink); }
+html[data-theme="dark"] .themebtn { background: var(--surface); color: var(--night-ink); box-shadow: inset 0 0 0 2px var(--paper-2); }
+/* scènes de jeu dessinées : légèrement assombries la nuit */
+html[data-theme="dark"] .game canvas { filter: brightness(.82) saturate(1.05); }

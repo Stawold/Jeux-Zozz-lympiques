@@ -64,8 +64,27 @@ function onState(st) {
 let gameProgs = {};
 
 /* ---------- Écrans ---------- */
+/* ---------- Mode sombre / nuit : auto (suit le téléphone), clair ou sombre ---------- */
+const THEME_ICON = { auto: '🌗', light: '☀️', dark: '🌙' };
+let themePref = store.get('bg_theme') || 'auto';
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const dark = themePref === 'dark' || (themePref === 'auto' && darkMQ.matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#170d21' : '#fff1f5');
+  if (window.setNight3d) window.setNight3d(dark);
+  const b = document.getElementById('theme'); if (b) { b.textContent = THEME_ICON[themePref]; b.title = b.ariaLabel = 'Thème : ' + { auto: 'automatique', light: 'clair', dark: 'nuit' }[themePref]; }
+}
+darkMQ.addEventListener?.('change', applyTheme);
+applyTheme();
+function themeButton() {
+  const b = document.getElementById('theme'); if (!b) return;
+  applyTheme();
+  b.onclick = () => { themePref = { auto: 'dark', dark: 'light', light: 'auto' }[themePref]; try { localStorage.setItem('bg_theme', themePref); } catch {} applyTheme(); toast({ auto: 'Thème automatique (comme ton téléphone)', dark: 'Mode nuit 🌙', light: 'Mode jour ☀️' }[themePref]); };
+}
 function render() {
   document.body.dataset.phase = S ? S.phase : 'home';
+  queueMicrotask(themeButton);
   if (!S) return renderHome();
   if (S.phase === 'lobby') return renderLobby();
   if (S.phase === 'event') return renderEvent();
@@ -78,7 +97,7 @@ function renderHome() {
   if (window.OFFLINE) {
     let nb = 7;
     app.innerHTML = `
-      <h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+      <button class="themebtn" id="theme" aria-label="Thème">🌗</button><h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
       <p class="sub">Entraînement contre des bots</p>
       <div class="card">
         <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
@@ -100,7 +119,7 @@ function renderHome() {
     return;
   }
   app.innerHTML = `
-    <h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+    <button class="themebtn" id="theme" aria-label="Thème">🌗</button><h1 class="logo" style="margin-top:5vh"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     <div class="card">
       <input id="name" maxlength="16" placeholder="Ton pseudo" value="${esc(store.get('bg_name') || '')}">
       <button id="create">Créer une partie</button>
@@ -141,7 +160,7 @@ function renderLobby() {
   const link = `${location.origin}${location.pathname}?r=${S.code}`;
   app.innerHTML = `
     
-    <h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
+    <button class="themebtn" id="theme" aria-label="Thème">🌗</button><h1 class="logo small"><span class="l1">Les Jeux</span><span class="l2">Ose’Lympiques</span></h1>
     ${window.OFFLINE ? '' : `<div class="codecard"><div><div class="lbl">Code de la partie</div><div class="code">${S.code}</div></div>
       <button class="pillbtn" id="share">Partager</button></div>`}
     <section class="blk"><div class="blkhead"><h2>Athlètes</h2><span>${S.players.length} / 16</span></div>
@@ -280,7 +299,7 @@ function renderEvent() {
   const strip = recordStrip(cur.event);
   app.innerHTML = `
     <div class="title" style="margin-top:6px">Épreuve ${cur.index + 1}/${cur.count}</div>
-    <h1 class="logo" style="margin:10px 0 14px;font-size:44px">${esc(ev.name)}</h1>
+    <button class="themebtn" id="theme" aria-label="Thème">🌗</button><h1 class="logo" style="margin:10px 0 14px;font-size:44px">${esc(ev.name)}</h1>
     ${rulesHTML(cur.event)}
     <button class="ghost" id="try" ${triedId === cur.id ? 'hidden' : ''}>🎮 Essai de 30 s<small>une seule fois · ne compte pas</small></button>
     <div id="rec"></div>
@@ -470,7 +489,7 @@ function renderReveal() {
     const pf = RACE.includes(r.event) && top.length >= 2 && Math.abs(top[0].score - top[1].score) <= 0.15;
     app.innerHTML = `
       <div class="title" style="margin-top:6px">Résultats</div>
-      <h1 class="logo" style="margin:8px 0 12px;font-size:40px">${esc(ev.name)}</h1>
+      <button class="themebtn" id="theme" aria-label="Thème">🌗</button><h1 class="logo" style="margin:8px 0 12px;font-size:40px">${esc(ev.name)}</h1>
       ${pf ? '<div class="card pfcard"><h2>📸 Photo-finish</h2><canvas id="pf"></canvas></div>' : ''}
       <div class="card">${duel ? '<h2 style="text-align:center">Vainqueurs des duels</h2>' : ''}${podiumHTML(groups)}</div>
       ${meRow ? `<div class="card dark" style="text-align:center"><h2 style="margin:0">Toi : ${meRow.rank ? (duel ? (meRow.rank === 1 ? 'victoire' : 'défaite') : meRow.rank + (meRow.rank === 1 ? 'er' : 'e')) : '—'} · ${esc(meRow.detail || '')} · +${meRow.pts} pts</h2></div>` : ''}
@@ -519,7 +538,7 @@ function renderFinal() {
       <div class="block" style="height:${h}px;background:${cols[r]}">${r + 1}</div></div>`;
   };
   app.innerHTML = `
-    <h1 class="logo" style="margin-top:2vh;font-size:36px">Podium final</h1>
+    <button class="themebtn" id="theme" aria-label="Thème">🌗</button><h1 class="logo" style="margin-top:2vh;font-size:36px">Podium final</h1>
     <div class="card"><div class="podium">${step(1, 90)}${step(0, 130)}${step(2, 65)}</div></div>
     <div class="card"><div class="players">${ranked.map(({ p, rank }) => playerRow(p, `${MEDAL[rank] || rank + 1 + 'e'} · ${p.total} pts`)).join('')}</div></div>
     ${medalTable()}
@@ -538,11 +557,19 @@ const scene3d = (() => {
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0xfff1f5, 18, 60);
   const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xffd6e3, 1.35));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xffd6e3, 1.35); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 1.3); sun.position.set(5, 10, 6); scene.add(sun);
   const M = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.55, ...extra });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), M(0xffb6cf, { roughness: 1 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
+  // mode nuit : stade de nuit éclairé par les projecteurs
+  window.setNight3d = (night) => {
+    scene.fog.color.setHex(night ? 0x170d21 : 0xfff1f5);
+    hemi.intensity = night ? 0.55 : 1.35; hemi.groundColor.setHex(night ? 0x3a2550 : 0xffd6e3);
+    sun.intensity = night ? 0.9 : 1.3; sun.color.setHex(night ? 0xc9d3ff : 0xffffff);
+    ground.material.color.setHex(night ? 0x4a2b5e : 0xffb6cf);
+  };
+  window.setNight3d(document.documentElement.dataset.theme === 'dark');
 
   // Stade : piste ovale à couloirs + tribunes, toujours présent
   const stadium = new THREE.Group(); scene.add(stadium);
