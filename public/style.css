@@ -288,7 +288,7 @@ html[data-theme="dark"] :is(.jump, button.picked, .tile:not(.sel), .tapzone.lock
 html[data-theme="dark"] .chips button.sel { background: var(--coral) !important; color: #fff !important; box-shadow: 0 0 0 2px #fff1f5; }
 html[data-theme="dark"] .chips button:disabled { opacity: .3; }
 /* surfaces blanches → surfaces nuit */
-html[data-theme="dark"] :is(.card, button.ghost, .pl, .flags button, .chips button, .tile.t4, .help, .gauge, .mini div, .curl-start, .runbar, .wheel, .segbar span, .seq span, .grid9 button, .range, .ringzone, .custom) { background: var(--surface); color: var(--night-ink); }
+html[data-theme="dark"] :is(.card, button.ghost, .pl, .flags button, .chips button, .help, .gauge, .mini div, .curl-start, .runbar, .wheel, .segbar span, .seq span, .grid9 button, .range, .ringzone, .custom) { background: var(--surface); color: var(--night-ink); }
 /* aplats prune → prune éclairci pour se détacher du fond */
 html[data-theme="dark"] :is(.codecard, .hud, .pos, #toast, .wait, .tile.sel, .chips button.sel, button.alt, .flags button.sel, .card.dark, .trybar .pillbtn) { background: var(--night-plum); color: var(--night-ink); }
 html[data-theme="dark"] :is(h1.logo, .title, .ringzone span, .wheel, .mini div, .grid9 button) { color: var(--night-ink); }
@@ -304,3 +304,18 @@ html[data-theme="dark"] .card.dark .pl { color: var(--night-ink); }
 html[data-theme="dark"] .themebtn { background: var(--surface); color: var(--night-ink); box-shadow: inset 0 0 0 2px var(--paper-2); }
 /* scènes de jeu dessinées : légèrement assombries la nuit */
 html[data-theme="dark"] .game canvas { filter: brightness(.82) saturate(1.05); }
+
+html[data-theme="dark"] .tile.t4:not(.sel) { background: #ffc9a3; }
+
+/* Snowboard : zone verte, cadran de rotation */
+.ringzone.snowz { background: var(--mint) !important; color: var(--plum) !important; }
+.ringzone.snowz.ok { background: #7fe0b4 !important; } .ringzone.snowz.ko { background: #ffc2cf !important; }
+.ringzone.snowz span { color: var(--plum) !important; }
+/* Saut à ski : zones de glisse rythmées */
+.flyduo[hidden] { display: none !important; }
+.flyduo .swz { position: relative; overflow: visible; background: var(--plum-2); }
+.flyduo .swz.beat { background: var(--ok); }
+.flyduo .swz.beat::after { content: ""; position: absolute; left: 50%; top: 50%; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 50%; border: 4px solid #fff; transform: scale(var(--k, 1)); pointer-events: none; }
+.flyduo .swz.beat::before { content: ""; position: absolute; left: 50%; top: 50%; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 50%; border: 4px dashed rgba(255,255,255,.6); pointer-events: none; }
+#tap[hidden] { display: none !important; }
+.swz small { display: block; letter-spacing: 0; font: 700 12px var(--body) !important; color: inherit; opacity: .9; } .flyduo .swz { color: #fff1f5; font-size: 40px; }

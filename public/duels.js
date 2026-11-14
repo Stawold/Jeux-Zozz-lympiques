@@ -361,7 +361,7 @@ async function hockeyGame(root, ctx) {
     <div class="help" id="msg">Pose le doigt où tu veux et glisse : ta crosse suit. Frappe le palet avec la lame. Premier à ${WIN} buts.</div>`;
   const cv = $(root, '#cv'), msg = $(root, '#msg'), scEl = $(root, '#sc'), tm = $(root, '#tm');
   const { g, W, H } = fitCanvas(cv);
-  const FW = 100, FH = 160, BR = 3, CR = 16, GX0 = 41, GX1 = 59, GM = 24, GB = 17, BL = 6; // GM : ligne de but, GB : fond de cage, BL : demi-lame
+  const FW = 100, FH = 160, BR = 3, CR = 16, GX0 = 38, GX1 = 62, GM = 25, GB = 16, BL = 6; // GM : ligne de but, GB : fond de cage, BL : demi-lame
   const sc = Math.min(W / FW, H / FH), ox = (W - FW * sc) / 2, oy = (H - FH * sc) / 2;
   const flip = (p) => ({ x: FW - p.x, y: FH - p.y });
   const toS = (p) => { const q = D.host ? p : flip(p); return [ox + q.x * sc, oy + q.y * sc]; };

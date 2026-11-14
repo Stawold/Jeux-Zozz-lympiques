@@ -79,7 +79,6 @@ export async function bobsleigh(root, ctx) {
     if (hitT > 0) { g.fillStyle = 'rgba(232,69,107,.18)'; g.fillRect(0, 0, W, H); }
     // flèche du prochain virage
     const nc = curv(pos + 30);
-    if (Math.abs(nc) > 0.2 && state === 'run') { g.fillStyle = W_PLUM; g.font = '900 30px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText(nc < 0 ? '⬅' : '➡', W / 2, hor + 40); }
     requestAnimationFrame(draw);
   }
   requestAnimationFrame(draw);
@@ -101,9 +100,9 @@ export async function bobsleigh(root, ctx) {
         // descente : la pente accélère, les virages déportent vers l'extérieur
         v = Math.min(44, v + 2.6 * dt);
         steer = (hold.R ? 1 : 0) - (hold.L ? 1 : 0);
-        px += (steer * 1.5 + curv(pos) * v * v * 0.0006) * dt;
+        px += (steer * 1.5 - curv(pos) * v * v * 0.0006) * dt; // virage à gauche → déporté à droite, il faut appuyer à gauche
         if (Math.abs(px) > 0.85) { px = Math.sign(px) * 0.8; if (hitT <= 0) { v *= 0.82; hitT = 0.5; shake = 1; sfx('fail'); buzz(120); phase('run', '💥 Paroi ! Redresse !'); } }
-        else if (hitT <= 0 && Math.abs(px) < 0.5) phase('jump', Math.abs(curv(pos + 30)) > 0.2 ? (curv(pos + 30) < 0 ? '⬅ Virage à gauche : tiens l\'intérieur' : 'Virage à droite : tiens l\'intérieur ➡') : 'Ligne droite : laisse filer');
+        else if (hitT <= 0 && Math.abs(px) < 0.5) phase('jump', Math.abs(curv(pos + 30)) > 0.2 ? (curv(pos + 30) < 0 ? 'Virage à gauche : appuie à gauche' : 'Virage à droite : appuie à droite') : 'Ligne droite : laisse filer');
         pos += v * dt;
       }
       hitT -= dt; shake = Math.max(0, shake - dt * 2);
@@ -186,7 +185,7 @@ export async function artistique(root, ctx) {
   }
   // 2. Pirouette : faire tourner le doigt sur le rond pendant 3 s
   async function pir(el, lvl) {
-    phase('run', `🌀 ${el.n}`, 'Fais des cercles sur le rond le plus vite possible (3 s)'); rl.textContent = '↻';
+    phase('run', `🌀 ${el.n}`, 'Fais des cercles sur le rond le plus vite possible (3 s)'); rl.textContent = '';
     rg.clearRect(0, 0, rw, rh); rg.strokeStyle = W_LILAC; rg.lineWidth = 14; rg.beginPath(); rg.arc(C.x, C.y, base * 1.5, 0, 7); rg.stroke();
     let turns = 0, lastA = null;
     const pa = (e) => { const p = pt(e); return Math.atan2(p.y - C.y, p.x - C.x); };
@@ -298,7 +297,9 @@ export async function sautski(root, ctx) {
       <div class="help" id="msg">&nbsp;</div>
       <div class="gauge" id="gg"><div class="zone" id="gz" style="left:40%;width:20%"></div><div class="arrow" id="ga" style="left:50%"></div></div>
       <button class="tapzone" id="tap" disabled>…</button>
+      <div class="duo flyduo" id="fz" hidden><div class="tapzone swz" id="FL">⬆<small>glisse vers le haut</small></div><div class="tapzone swz" id="FR">⬆<small>glisse vers le haut</small></div></div>
     </div>`;
+  const fz = $(root, '#fz'), FL = $(root, '#FL'), FR = $(root, '#FR');
   const cv = $(root, '#cv'), tap = $(root, '#tap'), bEl = $(root, '#b'), trEl = $(root, '#tr'), gg = $(root, '#gg'), ga = $(root, '#ga'), gz = $(root, '#gz');
   const phase = wPhaseEl($(root, '#ph'), $(root, '#msg'));
   const { g, W, H } = fitCanvas(cv);
@@ -334,7 +335,7 @@ export async function sautski(root, ctx) {
     if (J.mode === 'fly') { g.beginPath(); g.moveTo(-14, 6); g.lineTo(16, -6); g.moveTo(-14, 10); g.lineTo(16, 10); g.stroke(); }
     else { g.beginPath(); g.moveTo(-16, 8); g.lineTo(16, 8); g.stroke(); }
     g.restore();
-    slime(g, px, py - (J.crouch ? 6 : 12), J.crouch ? 9 : 11, ctx.color(ctx.me));
+    if (J.mode === 'fall') slime(g, px + 10, py - 6, 10, ctx.color(ctx.me)); else slime(g, px, py - (J.crouch ? 6 : 12), J.crouch ? 9 : 11, ctx.color(ctx.me));
     requestAnimationFrame(draw);
   }
   requestAnimationFrame(draw);
@@ -342,7 +343,7 @@ export async function sautski(root, ctx) {
   for (let jmp = 1; jmp <= 2; jmp++) {
     trEl.textContent = `Saut ${jmp}/2`;
     J = { x: -RAMP, y: RAMP * 0.55, ang: 0.5, mode: 'ramp', crouch: false };
-    gg.hidden = true; tap.className = 'tapzone'; tap.disabled = false; tap.textContent = 'MAINTIENS';
+    gg.hidden = true; fz.hidden = true; tap.hidden = false; tap.className = 'tapzone'; tap.disabled = false; tap.textContent = 'MAINTIENS';
     phase('wait', `Saut ${jmp}/2 : sur la barre de départ`, 'Maintiens le bouton pour te lancer en position accroupie');
     // 1. Élan : maintenir appuyé (accroupi = vitesse) ; relâcher sur la table = appel
     while (!held) await sleep(30);
@@ -362,30 +363,66 @@ export async function sautski(root, ctx) {
     const q = Math.max(0, 1 - Math.abs(rx - (-1)) / 7); // idéal : 1 m avant le bout de la table
     tap.classList.remove('jumpbtn');
     const qTxt = q > 0.85 ? 'Appel parfait !' : q > 0.5 ? 'Bon appel' : rx < -1 ? 'Appel trop tôt' : 'Appel trop tard';
-    // 2. Vol : maintenir = se pencher en avant, relâcher = se redresser ; rester dans le vert
-    J.mode = 'fly'; gg.hidden = false; tap.textContent = 'PENCHE';
-    phase('jump', `② Vol ! ${qTxt}`, 'Garde la flèche dans le vert : maintiens pour te pencher, lâche pour te redresser');
-    let x = 0, y = 0, vx = 0.9 * (25 + 5 * c), vy = 1 + 3 * q, a = 0, wind = 0, lift = 0, liftSum = 0, liftN = 0, tel = null, teleOK = null;
+    // 2. Vol : glisser G puis D vers le haut, sur le rythme imposé par le vent
+    J.mode = 'fly'; tap.hidden = true; gg.hidden = true; fz.hidden = false;
+    phase('jump', `② Vol ! ${qTxt}`, 'Glisse vers le haut dans la zone qui s\'allume, pile quand le cercle se referme');
+    let x = 0, y = 0, vx = 0.9 * (25 + 5 * c), vy = 1 + 3 * q, lift = 0.6, beats = 0, good = 0;
+    // rythme : un temps toutes les 0,45 à 0,75 s (le vent change la cadence), côtés alternés
+    let beatAt = performance.now() + 700, beatSide = 0, judged = false, period = 600;
+    const swipes = [];
+    const zoneSwipe = (el, s) => {
+      let st = null;
+      el.onpointerdown = (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); st = { y: e.clientY, t: performance.now() }; };
+      el.onpointerup = (e) => { if (!st) return; const dy = st.y - e.clientY; const t = st.t; st = null; if (dy > 25) swipes.push({ s, t: (t + performance.now()) / 2 }); };
+    };
+    zoneSwipe(FL, 0); zoneSwipe(FR, 1);
+    const judge = (qq, txt) => { beats++; good += qq; lift = lift * 0.55 + qq * 0.45; $(root, '#msg').textContent = txt; };
     last = performance.now();
-    while (true) {
+    let landed = false;
+    while (!landed) {
       await sleep(16);
       const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000) * 1.5; last = now;
-      if (Math.random() < dt * 1.2) wind = (Math.random() - 0.5) * 70;
-      a += ((held ? -38 : 38) + wind) * dt; a = Math.max(-45, Math.min(45, a));
-      lift = Math.max(0, 1 - Math.abs(a) / 20); liftSum += lift; liftN++;
-      ga.style.left = (50 + a / 45 * 50) + '%';
+      // traitement des glissés
+      while (swipes.length) {
+        const sw = swipes.shift(), err = Math.abs(sw.t - beatAt);
+        if (judged || err > 260) { judge(0, '✗ Hors rythme'); sfx('fail'); continue; }
+        if (sw.s !== beatSide) { judge(0, '✗ Mauvais côté'); sfx('fail'); judged = true; continue; }
+        const qq = Math.max(0, 1 - err / 260); judged = true;
+        judge(qq, qq > 0.75 ? '✓ Parfait, bien gainé !' : qq > 0.4 ? '✓ Bien' : '~ Un peu décalé');
+        sfx(qq > 0.75 ? 'ok' : 'tick'); buzz(15);
+      }
+      if (now > beatAt + 260) {
+        if (!judged) { judge(0, '✗ Temps manqué : le vent te déséquilibre'); buzz(60); }
+        beatSide = 1 - beatSide; period = 450 + Math.random() * 300; beatAt += period; judged = false;
+      }
+      // anneaux qui se referment sur la zone active
+      const k = Math.max(0, Math.min(1, (beatAt - now) / period));
+      FL.classList.toggle('beat', beatSide === 0 && !judged); FR.classList.toggle('beat', beatSide === 1 && !judged);
+      (beatSide ? FR : FL).style.setProperty('--k', (1 + k * 1.4).toFixed(3));
       vy -= 9.8 * (1 - lift * 0.68) * dt; x += vx * dt; y += vy * dt;
-      J.x = x; J.y = y; J.ang = 0.25 + a / 120;
-      const h = y - hill(x);
-      // 3. Réception : bouton vert près du sol, taper = télémark
-      if (h < 4 && tel === null) { tel = 'ready'; gg.hidden = true; tap.className = 'tapzone jumpbtn'; tap.textContent = 'TÉLÉMARK !'; phase('jump', '③ Réception : tape TÉLÉMARK !'); held = false; const tc = () => { teleOK = y - hill(x) < 4 ? 'ok' : 'early'; tap.removeEventListener('pointerdown', tc); }; tap.addEventListener('pointerdown', tc); }
-      if (h <= 0 && x > 5) break;
+      J.x = x; J.y = y; J.ang = 0.25 + (1 - lift) * 0.35;
+      if (y - hill(x) <= 0 && x > 5) landed = true;
     }
+    fz.hidden = true; FL.classList.remove('beat'); FR.classList.remove('beat');
     J.y = hill(x); J.mode = 'land';
+    // 3. Réception : stopper la barre (qui ne revient pas) dans la zone verte
+    gg.hidden = false; tap.hidden = false; tap.disabled = false; tap.className = 'tapzone jumpbtn'; tap.textContent = 'STOP !';
+    const zl = 45 + Math.random() * 30, zw = 14;
+    gz.style.left = zl + '%'; gz.style.width = zw + '%';
+    phase('jump', '③ Réception : stoppe la barre dans le vert !', 'Elle ne revient pas : rate-la et c\'est la chute');
+    held = false;
+    const pos = await new Promise((res) => {
+      const t0 = performance.now(), D = 1300; let fin = false;
+      const h2 = (e) => { e.preventDefault(); done(); };
+      function done() { if (fin) return; fin = true; tap.removeEventListener('pointerdown', h2); res(Math.min(100, (performance.now() - t0) / D * 100)); }
+      tap.addEventListener('pointerdown', h2);
+      (function mv() { if (fin) return; const p = (performance.now() - t0) / D * 100; ga.style.left = Math.min(100, p) + '%'; if (p >= 100) return done(); requestAnimationFrame(mv); })();
+    });
     let d = Math.round(x * 2) / 2;
-    if (teleOK === 'ok') { phase('wait', `✅ ${String(d).replace('.', ',')} m · télémark !`); sfx('ok'); buzz([30, 30, 30]); }
-    else { d = Math.round(d * 0.9 * 2) / 2; phase('wait', `${teleOK ? 'Télémark trop tôt' : 'Pas de télémark : réception lourde'} · ${String(d).replace('.', ',')} m`, 'Distance réduite de 10 %'); sfx('fail'); buzz(120); }
-    marks.push(d); best = Math.max(best, d); bEl.textContent = 'Meilleur : ' + String(best).replace('.', ',') + ' m';
+    if (pos >= zl && pos <= zl + zw) { phase('wait', `✅ ${String(d).replace('.', ',')} m · télémark !`, `Rythme en vol : ${Math.round(good / Math.max(1, beats) * 100)} %`); sfx('ok'); buzz([30, 30, 30]); }
+    else { J.mode = 'fall'; phase('run', `💥 Chute à la réception · 0 m`, `Tu aurais posé à ${String(d).replace('.', ',')} m…`); d = 0; sfx('fail'); buzz(250); }
+    gg.hidden = true;
+    if (d > 0) marks.push(d); best = Math.max(best, d); bEl.textContent = 'Meilleur : ' + String(best).replace('.', ',') + ' m';
     tap.disabled = true; tap.className = 'tapzone'; tap.textContent = '…'; held = false;
     await sleep(2200);
   }
@@ -401,9 +438,10 @@ export async function snowboard(root, ctx) {
       <div class="hud"><span class="big" id="s">0 pts</span><span id="t">Saut 0/${AIRS}</span></div>
       <div class="phase ph-wait" id="ph">Prépare-toi</div>
       <div class="help" id="msg">&nbsp;</div>
-      <div class="ringzone" id="rz"><span id="rl">TAP au fond · ↻ en l'air</span></div>
+      <div class="ringzone snowz" id="rz"><canvas id="dial" style="position:absolute;inset:0;width:100%;height:100%"></canvas><span id="rl">TAP au fond · ↻ en l'air</span></div>
     </div>`;
   const cv = $(root, '#cv'), rz = $(root, '#rz'), rl = $(root, '#rl'), sEl = $(root, '#s'), tEl = $(root, '#t');
+  const DL = fitCanvas($(root, '#dial'));
   const phase = wPhaseEl($(root, '#ph'), $(root, '#msg'));
   const { g, W, H } = fitCanvas(cv);
   let armed = true, score = 0, airs = 0, E = 0.75, ph = -Math.PI / 2, dir = 1, inAir = null, rot = 0, lastA = null, fall = 0, popTxt = '', popT = 0;
@@ -465,9 +503,26 @@ export async function snowboard(root, ctx) {
     g.fillStyle = W_CORAL; g.fillRect(-16, 10, 32, 5);
     g.restore();
     g.save(); g.translate(P.x, P.y - 14); g.rotate(fall > 0 ? 1.4 : ang * 0.9); slime(g, 0, -2, 12, ctx.color(ctx.me)); g.restore();
-    if (inAir) { g.fillStyle = W_PLUM; g.font = '900 22px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText(Math.round(rot) + '°', W / 2, H * 0.2); }
+    drawDial();
+    if (inAir) { const left = 1 - inAir.t / inAir.T; g.fillStyle = 'rgba(42,22,56,.15)'; g.fillRect(W * 0.2, H * 0.08, W * 0.6, 8); g.fillStyle = left > 0.3 ? W_MINT : W_CORAL; g.fillRect(W * 0.2, H * 0.08, W * 0.6 * left, 8); g.fillStyle = W_PLUM; g.font = '800 11px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText('TEMPS EN L\'AIR', W / 2, H * 0.08 - 6); }
     else if (popT > 0) { popT -= dt; g.fillStyle = W_PLUM; g.font = '800 14px Unbounded, sans-serif'; g.textAlign = 'center'; g.fillText(popTxt, W / 2, H * 0.2); }
     if (airs < AIRS || inAir) requestAnimationFrame(frame);
+  }
+  // cadran de rotation : vert = tu peux poser (près d'un demi-tour), rouge = rotation de travers
+  function drawDial() {
+    const { g: d, W: dw, H: dh } = DL; d.clearRect(0, 0, dw, dh);
+    if (!inAir) { rz.classList.remove('ok', 'ko'); return; }
+    const n = Math.round(rot / 180), off = Math.abs(rot - n * 180), ok = off <= 45;
+    rz.classList.toggle('ok', ok); rz.classList.toggle('ko', !ok);
+    const cx = dw / 2, cy = dh / 2, R = Math.min(dw, dh) * 0.36;
+    d.lineWidth = 12;
+    for (const base of [0, Math.PI]) { d.strokeStyle = 'rgba(31,158,110,.55)'; d.beginPath(); d.arc(cx, cy, R, base - Math.PI / 2 - Math.PI / 4, base - Math.PI / 2 + Math.PI / 4); d.stroke(); }
+    d.strokeStyle = 'rgba(42,22,56,.15)'; d.lineWidth = 2; d.beginPath(); d.arc(cx, cy, R, 0, 7); d.stroke();
+    const a = (rot % 360) * Math.PI / 180 - Math.PI / 2;
+    d.strokeStyle = W_PLUM; d.lineWidth = 6; d.lineCap = 'round'; d.beginPath(); d.moveTo(cx, cy); d.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); d.stroke();
+    d.fillStyle = W_PLUM; d.textAlign = 'center'; d.textBaseline = 'middle';
+    d.font = '900 34px Unbounded, sans-serif'; d.fillText(Math.round(rot) + '°', cx, cy - R - 26 > 10 ? cy - R - 22 : 24);
+    d.font = '900 16px Unbounded, sans-serif'; d.fillText(ok ? (n ? '✓ ' + n * 180 + '° : tu peux poser' : '✓ Air simple') : '✗ Continue jusqu\'au vert', cx, Math.min(dh - 16, cy + R + 22));
   }
   function takeoff(side) {
     const h = (E - 1) / 0.75; // 0..1
